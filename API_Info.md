@@ -1,3 +1,6 @@
+# Info:
+Below are already created API Keys to use for the project.
+
 # Supabase Info:
 NEXT_PUBLIC_SUPABASE_URL=https://borpmguppzkklueyzcew.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvcnBtZ3VwcHpra2x1ZXl6Y2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNDU5NDMsImV4cCI6MjA2NzgyMTk0M30.pftXa3eTYQWJIQG7i-ZrGGXBxZ-4kKj7HYzZZ1DPbes

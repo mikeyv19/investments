@@ -1,33 +1,59 @@
-// Database types
-export interface Stock {
+// Database types based on Project Plan schema
+
+// Companies table
+export interface Company {
   id: string
   ticker: string
-  name: string
-  exchange: string
-  currency: string
+  company_name: string
+  created_at: string
+}
+
+// User watchlists
+export interface UserWatchlist {
+  id: string
+  user_id: string
+  name: string // e.g., "Tech Stocks", "My Favorites"
   created_at: string
   updated_at: string
 }
 
-export interface EarningsReport {
+// Watchlist stocks (junction table)
+export interface WatchlistStock {
   id: string
-  stock_id: string
-  report_date: string
-  reported_eps: number | null
-  estimated_eps: number | null
-  surprise: number | null
-  surprise_percentage: number | null
-  created_at: string
+  watchlist_id: string
+  company_id: string
+  added_at: string
+  // Relations
+  company?: Company
+  watchlist?: UserWatchlist
 }
 
-export interface TrackedStock {
+// Historical EPS data from SEC
+export interface HistoricalEPS {
   id: string
-  user_id: string
-  stock_id: string
+  company_id: string
+  fiscal_period: string // e.g., "Q1 2024"
+  eps_actual: number
+  filing_date: string
   created_at: string
-  stock?: Stock
+  // Relations
+  company?: Company
 }
 
+// Earnings estimates from investor.com scraping
+export interface EarningsEstimate {
+  id: string
+  company_id: string
+  earnings_date: string
+  market_timing: 'before' | 'after' // before or after market
+  eps_estimate: number
+  last_updated: string
+  created_at: string
+  // Relations
+  company?: Company
+}
+
+// User type from Supabase Auth
 export interface User {
   id: string
   email: string
@@ -41,79 +67,85 @@ export interface ApiResponse<T> {
   message?: string
 }
 
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+// Data grid types
+export interface EarningsGridData {
+  ticker: string
+  company_name: string
+  earnings_date: string
+  market_timing: 'before' | 'after'
+  eps_estimate: number | null
+  eps_actual: number | null
+  fiscal_period: string
+  last_updated: string
+}
+
+// Filter and sort types for data grid
+export type SortOrder = 'asc' | 'desc'
+
+export interface SortConfig {
+  field: keyof EarningsGridData
+  order: SortOrder
+}
+
+export interface FilterConfig {
+  field: keyof EarningsGridData
+  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'between'
+  value: any
+  value2?: any // for 'between' operator
+}
+
+export interface GridState {
   page: number
   pageSize: number
-  totalCount: number
-  totalPages: number
+  sortBy: SortConfig[]
+  filters: FilterConfig[]
+  globalSearch?: string
 }
 
-// Search types
-export interface StockSearchResult {
+// SEC API types
+export interface SECCompanyInfo {
+  cik: string
   ticker: string
   name: string
-  exchange: string
-  type: string
-  active: boolean
+  sic: string
+  sicDescription: string
+  exchanges: string[]
 }
 
-// Earnings types
-export interface EarningsData {
-  symbol: string
-  reportedDate: string
-  reportedEPS: string
-  estimatedEPS: string
-  surprise: string
-  surprisePercentage: string
-}
-
-export interface EarningsCalendarEntry {
-  symbol: string
-  name: string
+export interface SECFiling {
+  accessionNumber: string
+  filingDate: string
   reportDate: string
-  fiscalDateEnding: string
-  estimate: string
-  currency: string
+  form: string
+  primaryDocument: string
+  items: any[]
 }
 
-// Company types
-export interface CompanyOverview {
-  symbol: string
-  name: string
-  description: string
-  exchange: string
-  currency: string
-  country: string
-  sector: string
-  industry: string
-  marketCapitalization: string
-  peRatio: string
-  dividendYield: string
-  eps: string
-  revenuePerShareTTM: string
-  profitMargin: string
+// Investor.com scraping types
+export interface ScrapedEarningsData {
+  ticker: string
+  companyName: string
+  earningsDate: string
+  marketTiming: 'before' | 'after'
+  epsEstimate: string
+  analystCount?: number
 }
 
 // Request types
-export interface SearchStocksRequest {
-  query: string
-  limit?: number
+export interface CreateWatchlistRequest {
+  name: string
 }
 
-export interface AddTrackedStockRequest {
+export interface AddToWatchlistRequest {
+  watchlist_id: string
   ticker: string
 }
 
-export interface GetEarningsHistoryRequest {
-  symbol: string
-  limit?: number
-}
-
-// Response status types
-export enum ApiStatus {
-  SUCCESS = 'success',
-  ERROR = 'error',
-  LOADING = 'loading',
+export interface GetEarningsDataRequest {
+  tickers?: string[]
+  start_date?: string
+  end_date?: string
+  watchlist_id?: string
 }
 
 // Error types
@@ -128,30 +160,17 @@ export class ApiError extends Error {
   }
 }
 
-// Utility types
-export type SortOrder = 'asc' | 'desc'
-
-export interface SortConfig {
-  field: string
-  order: SortOrder
+// Utility types for data grid
+export interface ExportConfig {
+  format: 'csv' | 'excel'
+  filename?: string
+  columns?: string[]
 }
 
-export interface FilterConfig {
-  field: string
-  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains'
-  value: any
-}
-
-// Chart types
-export interface ChartDataPoint {
-  date: string
-  value: number
-  label?: string
-}
-
-export interface EarningsChartData {
-  dates: string[]
-  reportedEPS: number[]
-  estimatedEPS: number[]
-  surprises: number[]
+export interface PaginatedResponse<T> {
+  data: T[]
+  page: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
 }

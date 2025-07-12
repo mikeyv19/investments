@@ -1,0 +1,19 @@
+{
+  "name": "earnings-scraper-scripts",
+  "version": "1.0.0",
+  "description": "Scripts for scraping earnings data",
+  "main": "scrape-earnings.js",
+  "scripts": {
+    "scrape": "node scrape-earnings.js",
+    "scrape-watchlist": "node scrape-earnings-watchlist.js",
+    "test": "node test-scraper.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.5",
+    "puppeteer": "^21.0.0",
+    "dotenv": "^16.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

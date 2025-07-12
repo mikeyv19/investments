@@ -1,0 +1,107 @@
+name: Scrape Earnings Data
+
+on:
+  schedule:
+    # Run daily at 6 AM UTC (1 AM EST / 10 PM PST)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  scrape-watchlist-earnings:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: earnings-tracker/scripts/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('earnings-tracker/scripts/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      - name: Install dependencies
+        working-directory: earnings-tracker/scripts
+        run: npm install
+      
+      - name: Check watchlist stocks
+        working-directory: earnings-tracker/scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "Checking which stocks are in watchlists..."
+          node -e "
+          const { createClient } = require('@supabase/supabase-js');
+          const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+          
+          async function checkWatchlists() {
+            const { data, count } = await supabase
+              .from('watchlist_stocks')
+              .select('*', { count: 'exact', head: true });
+            
+            console.log(\`Total stocks in all watchlists: \${count || 0}\`);
+            
+            if (!count || count === 0) {
+              console.log('⚠️  WARNING: No stocks found in any watchlists!');
+              console.log('The scraper will not fetch any data.');
+              console.log('Add stocks to watchlists before running the scraper.');
+            }
+          }
+          
+          checkWatchlists().catch(console.error);
+          "
+      
+      - name: Run earnings scraper (watchlist only)
+        working-directory: earnings-tracker/scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scrape-earnings-watchlist.js
+      
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: scraper-logs
+          path: earnings-tracker/scripts/logs/
+          retention-days: 7
+
+  # Summary report after scraping
+  summary-report:
+    needs: scrape-watchlist-earnings
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: Generate summary
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "## Earnings Scraper Summary"
+          echo "Date: $(date)"
+          echo ""
+          echo "✅ Scraper completed successfully"
+          echo ""
+          echo "Only stocks in user watchlists were processed."
+
+  # Optional: Send notification on failure
+  notify-failure:
+    needs: scrape-watchlist-earnings
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "❌ Earnings scraper failed at $(date)"
+          echo "Check the GitHub Actions logs for details"
+          # Add your notification logic here (email, Slack, etc.)

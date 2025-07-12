@@ -12,7 +12,10 @@
       "Bash(npx next:*)",
       "Bash(npm uninstall:*)",
       "Bash(mv:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(test:*)",
+      "mcp__supabase__list_projects",
+      "Bash(npx supabase:*)"
     ],
     "deny": []
   }

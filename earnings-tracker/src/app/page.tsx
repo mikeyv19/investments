@@ -50,10 +50,11 @@ export default function Home() {
         <div className="mt-8">
           <h3 className="text-sm font-medium text-gray-900 mb-4">Features:</h3>
           <ul className="text-sm text-gray-600 space-y-2">
-            <li>• Track earnings dates for multiple stocks</li>
-            <li>• Personalized watchlist</li>
-            <li>• Real-time earnings calendar</li>
-            <li>• Email notifications (coming soon)</li>
+            <li>• Historical EPS data from SEC filings</li>
+            <li>• Multiple named watchlists</li>
+            <li>• Upcoming earnings calendar</li>
+            <li>• Advanced data grid with filtering & export</li>
+            <li>• Daily automated updates</li>
           </ul>
         </div>
       </div>

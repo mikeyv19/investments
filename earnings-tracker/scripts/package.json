@@ -1,0 +1,9 @@
+{
+  "name": "earnings-scraper-test",
+  "version": "1.0.0",
+  "description": "Minimal deps for testing",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.5",
+    "dotenv": "^16.0.3"
+  }
+}
