@@ -5,9 +5,10 @@ import { UserWatchlist, WatchlistStock } from '@/app/types'
 
 interface WatchlistManagerProps {
   onWatchlistSelect?: (watchlistId: string | null) => void
+  onStockAdded?: () => void
 }
 
-export default function WatchlistManager({ onWatchlistSelect }: WatchlistManagerProps) {
+export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: WatchlistManagerProps) {
   const [watchlists, setWatchlists] = useState<UserWatchlist[]>([])
   const [selectedWatchlist, setSelectedWatchlist] = useState<string | null>(null)
   const [watchlistStocks, setWatchlistStocks] = useState<WatchlistStock[]>([])
@@ -16,6 +17,7 @@ export default function WatchlistManager({ onWatchlistSelect }: WatchlistManager
   const [newStockTicker, setNewStockTicker] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [addingStock, setAddingStock] = useState(false)
 
   // Fetch watchlists
   useEffect(() => {
@@ -112,6 +114,9 @@ export default function WatchlistManager({ onWatchlistSelect }: WatchlistManager
   const addStock = async () => {
     if (!selectedWatchlist || !newStockTicker.trim()) return
 
+    setAddingStock(true)
+    setError(null)
+
     try {
       const response = await fetch(`/api/watchlists/${selectedWatchlist}/stocks`, {
         method: 'POST',
@@ -125,10 +130,24 @@ export default function WatchlistManager({ onWatchlistSelect }: WatchlistManager
         throw new Error(data.error || 'Failed to add stock')
       }
       
+      // Show success message while fetching earnings data
+      setError(`Added ${newStockTicker} - Fetching earnings data...`)
+      
       setWatchlistStocks([...watchlistStocks, data.data])
       setNewStockTicker('')
+      
+      // Notify parent component to refresh earnings data
+      // Wait a bit for the background fetch to complete
+      setTimeout(() => {
+        if (onStockAdded) {
+          onStockAdded()
+        }
+        setError(null)
+      }, 3000)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to add stock')
+    } finally {
+      setAddingStock(false)
     }
   }
 
@@ -261,13 +280,15 @@ export default function WatchlistManager({ onWatchlistSelect }: WatchlistManager
               onChange={(e) => setNewStockTicker(e.target.value.toUpperCase())}
               placeholder="Enter ticker symbol"
               className="flex-1 px-3 py-2 border rounded"
-              onKeyPress={(e) => e.key === 'Enter' && addStock()}
+              onKeyPress={(e) => e.key === 'Enter' && !addingStock && addStock()}
+              disabled={addingStock}
             />
             <button
               onClick={addStock}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              disabled={addingStock}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add Stock
+              {addingStock ? 'Adding...' : 'Add Stock'}
             </button>
           </div>
 

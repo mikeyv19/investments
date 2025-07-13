@@ -108,6 +108,32 @@ export async function POST(
       )
     }
 
+    // Fetch earnings data for the newly added stock
+    try {
+      const fetchResponse = await fetch(
+        `${request.nextUrl.origin}/api/companies/${ticker.toUpperCase()}/fetch-earnings`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Pass along the authorization header
+            'Authorization': request.headers.get('Authorization') || '',
+            // Pass cookies for auth
+            'Cookie': request.headers.get('Cookie') || ''
+          }
+        }
+      )
+
+      if (!fetchResponse.ok) {
+        console.warn(`Failed to fetch earnings data for ${ticker}:`, await fetchResponse.text())
+      } else {
+        console.log(`Successfully fetched earnings data for ${ticker}`)
+      }
+    } catch (fetchError) {
+      console.error(`Error fetching earnings data for ${ticker}:`, fetchError)
+      // Don't fail the watchlist add if earnings fetch fails
+    }
+
     return NextResponse.json({ data })
   } catch (error) {
     console.error('Add stock error:', error)

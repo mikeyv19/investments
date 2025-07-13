@@ -15,10 +15,10 @@ export default function EarningsDashboard() {
   const [dateFilter, setDateFilter] = useState(() => {
     // Calculate dates consistently on both server and client
     const today = new Date()
-    const thirtyDaysLater = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const oneHundredTwentyDaysLater = new Date(today.getTime() + 120 * 24 * 60 * 60 * 1000)
     return {
       startDate: today.toISOString().split('T')[0],
-      endDate: thirtyDaysLater.toISOString().split('T')[0]
+      endDate: oneHundredTwentyDaysLater.toISOString().split('T')[0]
     }
   })
   
@@ -60,6 +60,7 @@ export default function EarningsDashboard() {
         throw fetchError
       }
 
+      console.log('Earnings data received:', data?.length || 0, 'records')
       setEarningsData(data || [])
     } catch (err) {
       console.error('Error fetching earnings data:', err)
@@ -70,6 +71,8 @@ export default function EarningsDashboard() {
   }
 
   const refreshData = async () => {
+    console.log('Refreshing earnings data...')
+    setLoading(true)
     await fetchEarningsData()
   }
 
@@ -81,7 +84,10 @@ export default function EarningsDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar with Watchlists */}
           <div className="lg:col-span-1">
-            <WatchlistManager onWatchlistSelect={setSelectedWatchlistId} />
+            <WatchlistManager 
+              onWatchlistSelect={setSelectedWatchlistId}
+              onStockAdded={refreshData}
+            />
             
             {/* Date Filters */}
             <div className="bg-white rounded-lg shadow p-6 mt-6">
