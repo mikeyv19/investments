@@ -74,6 +74,7 @@ export interface EarningsGridData {
   earnings_date: string
   market_timing: 'before' | 'after'
   eps_estimate: number | null
+  year_ago_eps: number | null
   eps_actual: number | null
   fiscal_period: string
   last_updated: string

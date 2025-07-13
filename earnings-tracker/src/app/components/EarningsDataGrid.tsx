@@ -234,6 +234,19 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
               <th className="px-6 py-3 text-left">
                 <div className="space-y-2">
                   <button
+                    onClick={() => handleSort('year_ago_eps')}
+                    className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                  >
+                    Year Ago EPS
+                    {gridState.sortBy.find(s => s.field === 'year_ago_eps')?.order === 'asc' && '↑'}
+                    {gridState.sortBy.find(s => s.field === 'year_ago_eps')?.order === 'desc' && '↓'}
+                  </button>
+                </div>
+              </th>
+              
+              <th className="px-6 py-3 text-left">
+                <div className="space-y-2">
+                  <button
                     onClick={() => handleSort('eps_actual')}
                     className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
                   >
@@ -275,6 +288,9 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   ${row.eps_estimate?.toFixed(2) || 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  ${row.year_ago_eps?.toFixed(2) || 'N/A'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   ${row.eps_actual?.toFixed(2) || 'N/A'}

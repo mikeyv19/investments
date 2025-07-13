@@ -34,6 +34,7 @@ async function scrapeYahooFinance(ticker, browser) {
     ticker,
     earningsDate: null,
     epsEstimate: null,
+    yearAgoEPS: null,
     error: null
   }
 
@@ -100,6 +101,66 @@ async function scrapeYahooFinance(ticker, browser) {
     // Add a small delay to ensure content is fully loaded
     await new Promise(resolve => setTimeout(resolve, 2000))
 
+    // Get year-ago EPS from Earnings Estimate table
+    const yearAgoEPS = await analysisPage.evaluate(() => {
+      // Find the earnings estimate section
+      const earningsSection = document.querySelector('section[data-testid="earningsEstimate"]')
+      if (earningsSection) {
+        const table = earningsSection.querySelector('table')
+        if (table) {
+          // Find the "Year Ago EPS" row
+          const rows = table.querySelectorAll('tbody tr')
+          for (const row of rows) {
+            const firstCell = row.querySelector('td')
+            if (firstCell && firstCell.textContent.includes('Year Ago EPS')) {
+              // Get the second cell (Current Qtr value)
+              const cells = row.querySelectorAll('td')
+              if (cells.length >= 2) {
+                const yearAgoValue = cells[1].textContent.trim()
+                const parsed = parseFloat(yearAgoValue)
+                if (!isNaN(parsed)) {
+                  console.log('Found Year Ago EPS in Earnings Estimate table:', parsed)
+                  return parsed
+                }
+              }
+              break
+            }
+          }
+        }
+      }
+      return null
+    })
+    
+    // Get current quarter estimate (keep existing logic)
+    const currentQuarterEstimate = await analysisPage.evaluate(() => {
+      // Find the earnings estimate section
+      const earningsSection = document.querySelector('section[data-testid="earningsEstimate"]')
+      if (earningsSection) {
+        const table = earningsSection.querySelector('table')
+        if (table) {
+          // Find the "Avg. Estimate" row
+          const rows = table.querySelectorAll('tbody tr')
+          for (const row of rows) {
+            const firstCell = row.querySelector('td')
+            if (firstCell && firstCell.textContent.includes('Avg. Estimate')) {
+              // Get the second cell (Current Qtr value)
+              const cells = row.querySelectorAll('td')
+              if (cells.length >= 2) {
+                const estimateValue = cells[1].textContent.trim()
+                const parsed = parseFloat(estimateValue)
+                if (!isNaN(parsed)) {
+                  console.log('Found Avg. Estimate in Earnings Estimate table:', parsed)
+                  return estimateValue
+                }
+              }
+              break
+            }
+          }
+        }
+      }
+      return null
+    })
+
     // Get the current quarter estimate
     const epsEstimate = await analysisPage.evaluate(() => {
       // First, try to find the estimate in the specific div structure
@@ -165,13 +226,23 @@ async function scrapeYahooFinance(ticker, browser) {
       return null
     })
 
-    if (epsEstimate) {
-      // Handle potential negative numbers and clean the string
+    // Use the current quarter estimate from the Earnings Estimate table if found
+    if (currentQuarterEstimate) {
+      result.epsEstimate = parseFloat(currentQuarterEstimate)
+      console.log(`  Found EPS estimate: ${currentQuarterEstimate} (from Earnings Estimate table)`)
+    } else if (epsEstimate) {
+      // Fall back to the tooltip/div estimate if table value not found
       const cleanEstimate = epsEstimate.replace(/[^0-9.-]/g, '')
       result.epsEstimate = parseFloat(cleanEstimate)
       console.log(`  Found EPS estimate: ${epsEstimate} (parsed as ${result.epsEstimate})`)
     } else {
       console.log(`  No EPS estimate found for ${ticker}`)
+    }
+    
+    // Add year-ago EPS to result
+    if (yearAgoEPS !== null) {
+      result.yearAgoEPS = yearAgoEPS
+      console.log(`  Found year-ago EPS: $${yearAgoEPS}`)
     }
 
     await analysisPage.close()
@@ -239,6 +310,7 @@ async function updateDatabase(scrapedData) {
             earnings_date: data.earningsDate,
             market_timing: 'after', // Default to 'after' when Yahoo doesn't specify
             eps_estimate: data.epsEstimate,
+            year_ago_eps: data.yearAgoEPS, // Store year-ago EPS
             last_updated: new Date().toISOString()
           }, {
             onConflict: 'company_id,earnings_date',
@@ -251,6 +323,7 @@ async function updateDatabase(scrapedData) {
           console.log(`  Updated ${data.ticker} successfully`)
         }
       }
+      
     } catch (error) {
       console.error(`  Error processing ${data.ticker}:`, error)
     }
@@ -318,10 +391,11 @@ async function scrapeEarningsData() {
     if (successful > 0) {
       console.log('\nScraped data:')
       scrapedData.forEach(d => {
-        if (d.earningsDate || d.epsEstimate) {
+        if (d.earningsDate || d.epsEstimate || d.yearAgoEPS) {
           console.log(`  ${d.ticker}:`)
           if (d.earningsDate) console.log(`    Earnings date: ${d.earningsDate}`)
           if (d.epsEstimate) console.log(`    EPS estimate: $${d.epsEstimate}`)
+          if (d.yearAgoEPS) console.log(`    Year-ago EPS: $${d.yearAgoEPS}`)
         }
       })
     }

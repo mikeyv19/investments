@@ -172,63 +172,12 @@ async function scrapeSingleStock(ticker) {
       console.log(`Created company: ${company.ticker}`)
     }
 
-    // Fetch SEC data
-    console.log('\n1. Fetching SEC data...')
-    const cik = await getCIKFromTicker(ticker)
-    
-    if (cik) {
-      console.log(`   CIK: ${cik}`)
-      const epsData = await getHistoricalEPS(cik, ticker)
-      
-      if (epsData.length > 0) {
-        console.log(`   Found ${epsData.length} EPS records`)
-        
-        // Get real company name from SEC data if available
-        if (company.company_name === ticker.toUpperCase()) {
-          // Try to get company name from SEC
-          // This would require additional API call - skipping for now
-        }
-        
-        // Prepare data for database
-        const uniqueEps = Array.from(
-          new Map(epsData.slice(0, 8).map(item => [item.fiscal_period, item])).values()
-        )
-        
-        const epsToInsert = uniqueEps.map(entry => ({
-          company_id: company.id,
-          fiscal_period: entry.fiscal_period,
-          eps_actual: parseFloat(entry.eps_actual),
-          filing_date: entry.filing_date
-        }))
-
-        const { error: epsError } = await supabase
-          .from('historical_eps')
-          .upsert(epsToInsert, {
-            onConflict: 'company_id,fiscal_period',
-            ignoreDuplicates: false
-          })
-
-        if (epsError) {
-          console.error('   Error saving EPS data:', epsError.message)
-        } else {
-          console.log(`   ✓ Saved ${epsToInsert.length} EPS records`)
-          
-          // Show latest data
-          const latest = epsData[0]
-          console.log(`   Latest: ${latest.fiscal_period} - EPS: $${latest.eps_actual}`)
-        }
-      } else {
-        console.log('   No EPS data found')
-      }
-    } else {
-      console.log('   CIK not found - skipping SEC data')
-    }
-
-    // Add delay before Yahoo Finance
-    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_MS))
+    // Skip SEC data fetching - we'll get it from Yahoo Finance instead
+    // console.log('\n1. Fetching SEC data...')
+    // This is now handled by Yahoo Finance scraping which includes historical EPS
 
     // Fetch Yahoo Finance data
-    console.log('\n2. Fetching Yahoo Finance data...')
+    console.log('\nFetching Yahoo Finance data (including historical EPS)...')
     const browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -237,10 +186,11 @@ async function scrapeSingleStock(ticker) {
     const yahooData = await scrapeYahooFinance(ticker, browser)
     await browser.close()
 
-    if (yahooData.earningsDate || yahooData.epsEstimate) {
+    if (yahooData.earningsDate || yahooData.epsEstimate || yahooData.yearAgoEPS) {
       console.log('   ✓ Found Yahoo data:')
       if (yahooData.earningsDate) console.log(`     Earnings date: ${yahooData.earningsDate}`)
       if (yahooData.epsEstimate) console.log(`     EPS estimate: $${yahooData.epsEstimate}`)
+      if (yahooData.yearAgoEPS) console.log(`     Year-ago EPS: $${yahooData.yearAgoEPS}`)
 
       // Update database
       if (yahooData.earningsDate) {
@@ -251,6 +201,7 @@ async function scrapeSingleStock(ticker) {
             earnings_date: yahooData.earningsDate,
             market_timing: 'after', // Default
             eps_estimate: yahooData.epsEstimate,
+            year_ago_eps: yahooData.yearAgoEPS,
             last_updated: new Date().toISOString()
           }, {
             onConflict: 'company_id,earnings_date',
@@ -263,6 +214,7 @@ async function scrapeSingleStock(ticker) {
           console.log('   ✓ Saved earnings estimate')
         }
       }
+      
     } else {
       console.log('   No Yahoo Finance data found')
     }
