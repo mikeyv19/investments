@@ -194,11 +194,11 @@ async function updateDatabase(scrapedData) {
           .upsert({
             company_id: company.id,
             earnings_date: data.earningsDate,
-            market_timing: 'unknown', // Yahoo doesn't specify before/after
+            market_timing: 'after', // Default to 'after' when Yahoo doesn't specify
             eps_estimate: data.epsEstimate,
             last_updated: new Date().toISOString()
           }, {
-            onConflict: 'company_id',
+            onConflict: 'company_id,earnings_date',
             ignoreDuplicates: false
           })
 

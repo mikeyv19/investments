@@ -262,7 +262,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   {row.company_name}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(row.earnings_date).toLocaleDateString()}
+                  {new Date(row.earnings_date + 'T00:00:00').toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
