@@ -95,38 +95,81 @@ async function scrapeYahooFinance(ticker, browser) {
     })
 
     // Wait for the analysis content to load
-    await analysisPage.waitForSelector('table, .yf-qdsu8q', { timeout: 10000 }).catch(() => {})
+    await analysisPage.waitForSelector('table, section[data-testid="earningsEstimate"]', { timeout: 10000 }).catch(() => {})
+    
+    // Add a small delay to ensure content is fully loaded
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
     // Get the current quarter estimate
     const epsEstimate = await analysisPage.evaluate(() => {
-      // Try to find the current quarter estimate in the table
+      // First, try to find the estimate in the specific div structure
+      // Look for the tooltip div with title="Estimate" and the txt-positive span
+      const estimateDivs = document.querySelectorAll('div[title="Estimate"]')
+      for (const div of estimateDivs) {
+        const span = div.querySelector('span.txt-positive, span.txt-negative')
+        if (span) {
+          const text = span.textContent.trim()
+          // Remove + or - sign and validate it's a number
+          const cleanText = text.replace(/^[+-]/, '')
+          if (cleanText.match(/^\d+\.?\d*$/)) {
+            console.log('Found estimate in tooltip div:', text)
+            return text
+          }
+        }
+      }
+      
+      // Alternative: Look for txt-positive/txt-negative spans near "Estimate" text
+      const allSpans = document.querySelectorAll('span.txt-positive, span.txt-negative')
+      for (const span of allSpans) {
+        const parent = span.parentElement
+        if (parent && parent.textContent.includes('Estimate')) {
+          const text = span.textContent.trim()
+          const cleanText = text.replace(/^[+-]/, '')
+          if (cleanText.match(/^\d+\.?\d*$/)) {
+            console.log('Found estimate span near "Estimate" text:', text)
+            return text
+          }
+        }
+      }
+      
+      // Fallback: Try to find the current quarter estimate in tables
       const tables = document.querySelectorAll('table')
       
       for (const table of tables) {
         const rows = table.querySelectorAll('tr')
         for (const row of rows) {
           const cells = row.querySelectorAll('td')
-          if (cells.length >= 2 && cells[0].textContent.includes('Current Qtr')) {
-            return cells[1].textContent.trim()
+          // Look for "Current Qtr" row - the estimate is typically in the 2nd column
+          if (cells.length >= 2) {
+            const firstCellText = cells[0].textContent.trim()
+            if (firstCellText.includes('Current Qtr') || 
+                firstCellText.includes('Current Quarter') ||
+                (firstCellText.match(/Q\d\s+\d{4}/) && row.innerHTML.includes('Estimate'))) {
+              // Get the text from the second cell (index 1)
+              const estimateText = cells[1].textContent.trim()
+              // Make sure it's a number and not a percentage or date
+              if (estimateText.match(/^-?\d+\.?\d*$/) && !estimateText.includes('%')) {
+                console.log('Found Current Qtr estimate in table:', estimateText)
+                return estimateText
+              }
+            }
           }
         }
       }
       
-      // Alternative: look for the estimate in the chart section
-      const estimateElements = document.querySelectorAll('[title="Estimate"], .txt-positive')
-      for (const elem of estimateElements) {
-        const text = elem.textContent.trim()
-        if (text.match(/^[+-]?\d+\.?\d*$/)) {
-          return text
-        }
-      }
+      // Debug: log what we found
+      console.log('Estimate divs found:', estimateDivs.length)
+      console.log('txt-positive/negative spans found:', allSpans.length)
+      console.log('Tables found:', tables.length)
       
       return null
     })
 
     if (epsEstimate) {
-      result.epsEstimate = parseFloat(epsEstimate.replace(/[^0-9.-]/g, ''))
-      console.log(`  Found EPS estimate: ${epsEstimate}`)
+      // Handle potential negative numbers and clean the string
+      const cleanEstimate = epsEstimate.replace(/[^0-9.-]/g, '')
+      result.epsEstimate = parseFloat(cleanEstimate)
+      console.log(`  Found EPS estimate: ${epsEstimate} (parsed as ${result.epsEstimate})`)
     } else {
       console.log(`  No EPS estimate found for ${ticker}`)
     }
@@ -239,10 +282,14 @@ async function scrapeEarningsData() {
 
     // Launch browser with local cache
     const browser = await puppeteer.launch({
-      headless: 'new',
+      headless: process.env.DEBUG_SCRAPER ? false : 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       executablePath: puppeteer.executablePath()
     })
+    
+    if (process.env.DEBUG_SCRAPER) {
+      console.log('Running in debug mode with visible browser...')
+    }
 
     // Scrape data for each ticker
     const scrapedData = []
