@@ -12,9 +12,19 @@ export default function EarningsDashboard() {
   const [selectedWatchlistId, setSelectedWatchlistId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [dateFilter, setDateFilter] = useState({
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const [dateFilter, setDateFilter] = useState(() => {
+    // Initialize dates consistently to avoid hydration mismatch
+    if (typeof window === 'undefined') {
+      // Server-side: return empty strings
+      return { startDate: '', endDate: '' }
+    }
+    // Client-side: calculate dates
+    const today = new Date()
+    const thirtyDaysLater = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
+    return {
+      startDate: today.toISOString().split('T')[0],
+      endDate: thirtyDaysLater.toISOString().split('T')[0]
+    }
   })
   
   const router = useRouter()
@@ -22,6 +32,16 @@ export default function EarningsDashboard() {
 
   useEffect(() => {
     checkAuth()
+    
+    // Set dates on client-side after hydration
+    if (dateFilter.startDate === '' && dateFilter.endDate === '') {
+      const today = new Date()
+      const thirtyDaysLater = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
+      setDateFilter({
+        startDate: today.toISOString().split('T')[0],
+        endDate: thirtyDaysLater.toISOString().split('T')[0]
+      })
+    }
   }, [])
 
   useEffect(() => {

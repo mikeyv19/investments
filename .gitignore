@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+.nyc_output
+
+# Production
+build/
+dist/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Puppeteer cache
+.cache/
+earnings-tracker/scripts/.cache/
+earnings-tracker/scripts/node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
+
+# Claude settings (you may want to keep this tracked)
+# .claude/settings.local.json

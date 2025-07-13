@@ -15,7 +15,20 @@
       "Bash(cd:*)",
       "Bash(test:*)",
       "mcp__supabase__list_projects",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(SUPABASE_URL=https://borpmguppzkklueyzcew.supabase.co SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvcnBtZ3VwcHpra2x1ZXl6Y2V3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjI0NTk0NCwiZXhwIjoyMDY3ODIxOTQ0fQ.W0uMd54-re9ySBK8QBe6zCagofXUAOEPU0FgQhH6LDE node scrape-earnings.js)",
+      "Bash(SUPABASE_URL=https://borpmguppzkklueyzcew.supabase.co SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvcnBtZ3VwcHpra2x1ZXl6Y2V3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjI0NTk0NCwiZXhwIjoyMDY3ODIxOTQ0fQ.W0uMd54-re9ySBK8QBe6zCagofXUAOEPU0FgQhH6LDE node scrape-earnings-watchlist.js)",
+      "Bash(SUPABASE_URL=https://borpmguppzkklueyzcew.supabase.co SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvcnBtZ3VwcHpra2x1ZXl6Y2V3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjI0NTk0NCwiZXhwIjoyMDY3ODIxOTQ0fQ.W0uMd54-re9ySBK8QBe6zCagofXUAOEPU0FgQhH6LDE node scrape-watchlist-with-sec.js)",
+      "Bash(chmod:*)",
+      "Bash(node:*)",
+      "Bash(set SUPABASE_URL=https://borpmguppzkklueyzcew.supabase.co)",
+      "Bash(set SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvcnBtZ3VwcHpra2x1ZXl6Y2V3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjI0NTk0NCwiZXhwIjoyMDY3ODIxOTQ0fQ.W0uMd54-re9ySBK8QBe6zCagofXUAOEPU0FgQhH6LDE)",
+      "Bash(cmd /c:*)",
+      "Bash(run-scraper.bat)",
+      "Bash(powershell:*)",
+      "Bash(npx puppeteer browsers:*)",
+      "Bash(del:*)",
+      "Bash(dir:*)"
     ],
     "deny": []
   }
