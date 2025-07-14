@@ -4,17 +4,18 @@ import { getHistoricalEPS, getCompanyTickers } from '@/app/lib/sec-edgar'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { ticker: string } }
+  { params }: { params: Promise<{ ticker: string }> }
 ) {
   try {
-    const ticker = params.ticker.toUpperCase()
-    const supabase = createClient()
+    const { ticker } = await params
+    const tickerUpper = ticker.toUpperCase()
+    const supabase = await createClient()
     
     // First check if company exists in our database
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('*')
-      .eq('ticker', ticker)
+      .eq('ticker', tickerUpper)
       .single()
     
     if (companyError || !company) {
@@ -44,7 +45,7 @@ export async function GET(
     
     // Otherwise, fetch fresh data from SEC
     const tickerMap = await getCompanyTickers()
-    const cik = tickerMap.get(ticker)
+    const cik = tickerMap.get(tickerUpper)
     
     if (!cik) {
       return NextResponse.json(
@@ -53,7 +54,7 @@ export async function GET(
       )
     }
     
-    const epsData = await getHistoricalEPS(cik, ticker)
+    const epsData = await getHistoricalEPS(cik)
     
     if (epsData.length === 0) {
       return NextResponse.json({ data: [] })
@@ -101,17 +102,18 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { ticker: string } }
+  { params }: { params: Promise<{ ticker: string }> }
 ) {
   try {
-    const ticker = params.ticker.toUpperCase()
-    const supabase = createClient()
+    const { ticker } = await params
+    const tickerUpper = ticker.toUpperCase()
+    const supabase = await createClient()
     
     // Force refresh of historical data
     const { data: company } = await supabase
       .from('companies')
       .select('*')
-      .eq('ticker', ticker)
+      .eq('ticker', tickerUpper)
       .single()
     
     if (!company) {
@@ -122,7 +124,7 @@ export async function POST(
     }
     
     const tickerMap = await getCompanyTickers()
-    const cik = tickerMap.get(ticker)
+    const cik = tickerMap.get(tickerUpper)
     
     if (!cik) {
       return NextResponse.json(
@@ -131,7 +133,7 @@ export async function POST(
       )
     }
     
-    const epsData = await getHistoricalEPS(cik, ticker)
+    const epsData = await getHistoricalEPS(cik)
     
     // Delete old data and insert fresh
     await supabase

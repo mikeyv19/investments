@@ -158,7 +158,7 @@ export async function runDailyScrape(): Promise<{
     const nextWeek = new Date(today)
     nextWeek.setDate(nextWeek.getDate() + 7)
     
-    const calendarData = await scrapeEarningsCalendar(today, nextWeek)
+    const calendarData = await scrapeEarningsCalendar()
     
     // Validate all scraped data
     const validData = calendarData.filter(item => {

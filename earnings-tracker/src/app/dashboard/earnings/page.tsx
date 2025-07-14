@@ -14,7 +14,7 @@ export default function EarningsDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hasWatchlists, setHasWatchlists] = useState(true)
-  const [watchlists, setWatchlists] = useState<unknown[]>([])
+  const [watchlists, setWatchlists] = useState<{ id: string; name: string }[]>([])
   const [refreshModal, setRefreshModal] = useState({
     isOpen: false,
     totalStocks: 0,

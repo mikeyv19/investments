@@ -255,7 +255,7 @@ export async function bulkFetchHistoricalEPS(
     const cik = company.cik || tickerToCik.get(company.ticker.toUpperCase());
 
     if (cik) {
-      const epsData = await getHistoricalEPS(cik, company.ticker);
+      const epsData = await getHistoricalEPS(cik);
       if (epsData.length > 0) {
         epsMap.set(company.ticker, epsData);
       }

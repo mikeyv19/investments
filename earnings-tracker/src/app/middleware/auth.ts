@@ -15,8 +15,8 @@ export async function withAuth(handler: (request: Request, context?: unknown) =>
     }
     
     // Add user to context
-    if (context) {
-      context.user = session.user
+    if (context && typeof context === 'object') {
+      (context as Record<string, unknown>).user = session.user
     }
     
     return handler(request, context)

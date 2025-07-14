@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    const supabase = createClient()
+    const supabase = await createClient()
     
     // First, search in our database
     const { data: existingCompanies, error: dbError } = await supabase

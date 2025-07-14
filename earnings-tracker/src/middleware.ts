@@ -12,7 +12,7 @@ const RATE_LIMIT_MAX_REQUESTS = 60 // 60 requests per minute
 export function middleware(request: NextRequest) {
   // Only apply rate limiting to API routes
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
     const key = `${ip}:${request.nextUrl.pathname}`
     const now = Date.now()
 
