@@ -26,27 +26,24 @@ function sleep(ms: number): Promise<void> {
 /**
  * Parse date and market timing from earnings calendar
  */
-function parseEarningsDateTime(dateStr: string, timeStr: string): {
-  date: string
-  timing: 'before' | 'after'
-} {
-  // Parse the date (format may vary)
-  const date = new Date(dateStr)
-  const formattedDate = date.toISOString().split('T')[0]
-  
-  // Determine market timing
-  const timing = timeStr.toLowerCase().includes('after') ? 'after' : 'before'
-  
-  return { date: formattedDate, timing }
-}
+// function parseEarningsDateTime(dateStr: string, timeStr: string): {
+//   date: string
+//   timing: 'before' | 'after'
+// } {
+//   // Parse the date (format may vary)
+//   const date = new Date(dateStr)
+//   const formattedDate = date.toISOString().split('T')[0]
+//   
+//   // Determine market timing
+//   const timing = timeStr.toLowerCase().includes('after') ? 'after' : 'before'
+//   
+//   return { date: formattedDate, timing }
+// }
 
 /**
  * Scrape earnings calendar for a specific date range
  */
-export async function scrapeEarningsCalendar(
-  startDate?: Date,
-  endDate?: Date
-): Promise<ScrapedEarningsData[]> {
+export async function scrapeEarningsCalendar(): Promise<ScrapedEarningsData[]> {
   const earnings: ScrapedEarningsData[] = []
   
   try {
@@ -111,15 +108,15 @@ export async function scrapeEarningsForTickers(
 /**
  * Parse earnings estimate from text
  */
-function parseEPSEstimate(text: string): number | null {
-  // Remove $ and other symbols
-  const cleaned = text.replace(/[$,]/g, '').trim()
-  
-  // Try to parse as number
-  const parsed = parseFloat(cleaned)
-  
-  return isNaN(parsed) ? null : parsed
-}
+// function parseEPSEstimate(text: string): number | null {
+//   // Remove $ and other symbols
+//   const cleaned = text.replace(/[$,]/g, '').trim()
+//   
+//   // Try to parse as number
+//   const parsed = parseFloat(cleaned)
+//   
+//   return isNaN(parsed) ? null : parsed
+// }
 
 /**
  * Validate scraped data

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from '@/app/contexts/auth-context'
-import UserProfile from '@/app/components/auth/UserProfile'
 
 export const metadata: Metadata = {
   title: "Earnings Tracker",

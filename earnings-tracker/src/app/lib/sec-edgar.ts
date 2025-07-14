@@ -10,7 +10,7 @@
 import { SECCompanyInfo, SECFiling, HistoricalEPS } from "@/app/types";
 
 const SEC_API_BASE = "https://data.sec.gov";
-const SEC_ARCHIVES_BASE = "https://www.sec.gov/Archives";
+// const SEC_ARCHIVES_BASE = "https://www.sec.gov/Archives";
 
 // IMPORTANT: Update this with your contact information
 const USER_AGENT = "mattmass123@gmail.com";
@@ -99,9 +99,10 @@ export async function getCompanyTickers(): Promise<Map<string, string>> {
     const tickerMap = new Map<string, string>();
 
     // Convert response to ticker -> CIK mapping
-    Object.values(data).forEach((company: any) => {
-      if (company.ticker) {
-        tickerMap.set(company.ticker, company.cik_str.padStart(10, "0"));
+    Object.values(data).forEach((company) => {
+      const comp = company as { ticker?: string; cik_str?: string };
+      if (comp.ticker && comp.cik_str) {
+        tickerMap.set(comp.ticker, comp.cik_str.padStart(10, "0"));
       }
     });
 
@@ -161,8 +162,7 @@ export async function getCompanyFilings(
  * Extract EPS data from company facts
  */
 export async function getHistoricalEPS(
-  cik: string,
-  ticker: string
+  cik: string
 ): Promise<HistoricalEPS[]> {
   try {
     const paddedCik = cik.padStart(10, "0");

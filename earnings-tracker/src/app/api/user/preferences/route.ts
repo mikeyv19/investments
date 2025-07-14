@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       const preferences = data.reduce((acc, pref) => {
         acc[pref.preference_key] = pref.preference_value
         return acc
-      }, {} as Record<string, any>)
+      }, {} as Record<string, unknown>)
 
       return NextResponse.json({ data: preferences })
     }

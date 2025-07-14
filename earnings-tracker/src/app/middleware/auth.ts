@@ -1,8 +1,8 @@
 import { createClient } from '@/app/lib/supabase-server'
 import { NextResponse } from 'next/server'
 
-export async function withAuth(handler: Function) {
-  return async (request: Request, context?: any) => {
+export async function withAuth(handler: (request: Request, context?: unknown) => Promise<Response>) {
+  return async (request: Request, context?: unknown) => {
     const supabase = await createClient()
     
     const { data: { session } } = await supabase.auth.getSession()

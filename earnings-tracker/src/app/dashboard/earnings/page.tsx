@@ -14,7 +14,7 @@ export default function EarningsDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hasWatchlists, setHasWatchlists] = useState(true)
-  const [watchlists, setWatchlists] = useState<any[]>([])
+  const [watchlists, setWatchlists] = useState<unknown[]>([])
   const [refreshModal, setRefreshModal] = useState({
     isOpen: false,
     totalStocks: 0,
@@ -39,13 +39,13 @@ export default function EarningsDashboard() {
 
   useEffect(() => {
     checkAuthAndWatchlists()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (selectedWatchlistId) {
       fetchEarningsData()
     }
-  }, [selectedWatchlistId, dateFilter])
+  }, [selectedWatchlistId, dateFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkAuthAndWatchlists = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -70,7 +70,7 @@ export default function EarningsDashboard() {
           const prefResponse = await fetch('/api/user/preferences?key=selectedWatchlistId')
           const prefData = await prefResponse.json()
           
-          if (prefData.data && data.data.some((w: any) => w.id === prefData.data)) {
+          if (prefData.data && data.data.some((w: { id: string }) => w.id === prefData.data)) {
             setSelectedWatchlistId(prefData.data)
           } else {
             // Select first watchlist if no preference or preference not found
@@ -252,7 +252,7 @@ export default function EarningsDashboard() {
               <ul className="text-left max-w-2xl mx-auto space-y-3">
                 <li className="flex items-start">
                   <span className="text-primary mr-2">•</span>
-                  <span>Create watchlists to organize your stocks (e.g., "Tech Stocks", "Dividend Portfolio")</span>
+                  <span>Create watchlists to organize your stocks (e.g., &quot;Tech Stocks&quot;, &quot;Dividend Portfolio&quot;)</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-primary mr-2">•</span>

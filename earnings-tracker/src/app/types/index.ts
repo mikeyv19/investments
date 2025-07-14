@@ -67,7 +67,7 @@ export interface UserPreference {
   id: string
   user_id: string
   preference_key: string
-  preference_value: any
+  preference_value: unknown
   created_at: string
   updated_at: string
 }
@@ -116,8 +116,8 @@ export interface SortConfig {
 export interface FilterConfig {
   field: keyof EarningsGridData
   operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'between'
-  value: any
-  value2?: any // for 'between' operator
+  value: unknown
+  value2?: unknown // for 'between' operator
 }
 
 export interface GridState {
@@ -144,7 +144,7 @@ export interface SECFiling {
   reportDate: string
   form: string
   primaryDocument: string
-  items: any[]
+  items: unknown[]
 }
 
 // Investor.com scraping types

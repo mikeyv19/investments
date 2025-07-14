@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/app/lib/supabase-server'
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const supabase = await createClient()
     
@@ -54,7 +54,7 @@ export async function PATCH(request: Request) {
     const body = await request.json()
     const { display_name, theme_preference, notification_preferences } = body
 
-    const updates: any = {}
+    const updates: Record<string, unknown> = {}
     if (display_name !== undefined) updates.display_name = display_name
     if (theme_preference !== undefined) updates.theme_preference = theme_preference
     if (notification_preferences !== undefined) updates.notification_preferences = notification_preferences

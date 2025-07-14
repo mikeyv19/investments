@@ -40,7 +40,7 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
     if (selectedWatchlistId && selectedWatchlist !== selectedWatchlistId) {
       setSelectedWatchlist(selectedWatchlistId)
     }
-  }, [selectedWatchlistId])
+  }, [selectedWatchlistId, selectedWatchlist])
 
   // Fetch stocks when watchlist changes
   useEffect(() => {

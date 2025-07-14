@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/app/lib/supabase-server'
-import { searchCompanyByTicker, getCompanyTickers } from '@/app/lib/sec-edgar'
+import { searchCompanyByTicker } from '@/app/lib/sec-edgar'
 
 export async function GET(request: NextRequest) {
   try {

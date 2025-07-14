@@ -18,8 +18,8 @@ export default function LoginForm() {
 
     try {
       await signIn(email, password)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
@@ -83,7 +83,7 @@ export default function LoginForm() {
         </div>
 
         <div className="text-center mt-4">
-          <span className="text-muted-foreground text-sm">Don't have an account? </span>
+          <span className="text-muted-foreground text-sm">Don&apos;t have an account? </span>
           <Link href="/signup" className="font-bold text-sm text-primary hover:text-primary/80 transition-colors">
             Sign Up
           </Link>

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { EarningsGridData, SortConfig, FilterConfig, GridState, ColumnVisibility } from '@/app/types'
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType, VerticalAlign } from 'docx'
+import { EarningsGridData, GridState, ColumnVisibility } from '@/app/types'
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType, VerticalAlign } from 'docx'
 
 interface EarningsDataGridProps {
   data: EarningsGridData[]
@@ -19,7 +19,7 @@ const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
   year_ago_eps: true
 }
 
-export default function EarningsDataGrid({ data, onExport }: EarningsDataGridProps) {
+export default function EarningsDataGrid({ data }: EarningsDataGridProps) {
   const [gridState, setGridState] = useState<GridState>({
     page: 1,
     pageSize: 25,
@@ -183,7 +183,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
         headers: { 'Content-Type': 'application/json' }
       })
       
-      const result = await response.json()
+      await response.json()
       
       if (response.ok) {
         setRefreshStatus({ [ticker]: 'Success!' })
@@ -197,7 +197,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
           setRefreshStatus({})
         }, 3000)
       }
-    } catch (error) {
+    } catch {
       setRefreshStatus({ [ticker]: 'Error' })
       setTimeout(() => {
         setRefreshStatus({})
@@ -210,7 +210,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
   // Export to CSV
   const exportToCSV = () => {
     const visibleColumns = Object.entries(columnVisibility)
-      .filter(([_, visible]) => visible)
+      .filter(([, visible]) => visible)
       .map(([column]) => column)
     
     const headers = ['ticker', 'company_name', 'earnings_date', 'earnings_time', 'market_timing', 'eps_estimate', 'year_ago_eps']
@@ -563,7 +563,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   // Data rows
                   ...Object.entries(byDate)
                     .sort(([a], [b]) => Number(a) - Number(b))
-                    .flatMap(([day, dayStocks], dayIdx) => [
+                    .flatMap(([, dayStocks]) => [
                       // Date header row
                       new TableRow({
                         children: [
@@ -583,13 +583,13 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                         ]
                       }),
                       // Stock rows for this date
-                      ...dayStocks.map((stock, stockIdx) => {
+                      ...dayStocks.map((stock) => {
                         const timing = stock.market_timing === 'before' ? 'Before' : 
                                      stock.market_timing === 'after' ? 'After' : 'During'
                         const epsEst = stock.eps_estimate || 0
                         const yrAgo = stock.year_ago_eps || 0
                         const change = epsEst && yrAgo ? ((epsEst - yrAgo) / Math.abs(yrAgo) * 100).toFixed(0) + '%' : 'N/A'
-                        const changeColor = epsEst > yrAgo ? '00B050' : epsEst < yrAgo ? 'C00000' : '000000'
+                        // const changeColor = epsEst > yrAgo ? '00B050' : epsEst < yrAgo ? 'C00000' : '000000'
                         
                         return new TableRow({
                           children: [

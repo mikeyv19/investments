@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/app/lib/supabase-server'
+import { createClient } from '@/app/lib/supabase-server'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
@@ -66,12 +66,12 @@ export async function POST(
           { status: 500 }
         )
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Script execution error:', error)
       return NextResponse.json(
         { 
           error: 'Failed to run scraper',
-          details: error.message
+          details: error instanceof Error ? error.message : 'Unknown error'
         },
         { status: 500 }
       )

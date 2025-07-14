@@ -25,7 +25,7 @@ export async function GET(
     }
     
     // Check if we already have historical data
-    const { data: existingEps, error: epsError } = await supabase
+    const { data: existingEps } = await supabase
       .from('historical_eps')
       .select('*')
       .eq('company_id', company.id)
