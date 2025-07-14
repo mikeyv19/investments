@@ -101,12 +101,12 @@ async function refreshStockWithBrowser(company, browser) {
         last_updated: new Date().toISOString()
       }
       
-      // Delete existing record first
+      // Delete ALL existing records for this company first
+      // This handles cases where the earnings date changes
       await supabase
         .from('earnings_estimates')
         .delete()
         .eq('company_id', company.id)
-        .eq('earnings_date', mergedData.earningsDate)
       
       // Insert new data
       const { error } = await supabase

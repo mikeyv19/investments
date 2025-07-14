@@ -9,7 +9,7 @@ on:
 jobs:
   refresh-all-stocks:
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # 3 hours max (for many stocks)
+    timeout-minutes: 240  # 4 hours max (for many stocks)
     
     steps:
     - name: Checkout repository

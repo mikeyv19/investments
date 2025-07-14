@@ -262,12 +262,12 @@ async function scrapeSingleStock(ticker) {
           market_timing: updateData.market_timing
         }, null, 2))
         
-        // First try to delete existing record to avoid constraint issues
+        // First delete ALL existing records for this company to avoid constraint issues
+        // This handles cases where the earnings date changes
         const { error: deleteError } = await supabase
           .from('earnings_estimates')
           .delete()
           .eq('company_id', company.id)
-          .eq('earnings_date', mergedData.earningsDate)
         
         if (deleteError && deleteError.code !== 'PGRST116') {
           console.error('   Error deleting old estimate:', deleteError.message)
