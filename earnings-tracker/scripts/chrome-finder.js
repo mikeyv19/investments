@@ -11,10 +11,10 @@ const path = require('path');
  */
 const CHROME_PATHS = {
   linux: [
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/google-chrome',
     '/snap/bin/chromium',
     process.env.PUPPETEER_EXECUTABLE_PATH
   ],
