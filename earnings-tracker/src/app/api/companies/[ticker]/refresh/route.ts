@@ -30,10 +30,19 @@ export async function POST(
     }
 
     console.log(`Triggering GitHub Actions workflow for ${ticker}...`)
+    console.log(`GitHub config - Owner: ${owner}, Repo: ${repo}`)
 
     // Trigger GitHub Actions workflow
-    const owner = process.env.GITHUB_OWNER || 'your-github-username' // You'll need to set this
-    const repo = process.env.GITHUB_REPO || 'vassosinvestments' // You'll need to set this
+    const owner = process.env.GITHUB_OWNER
+    const repo = process.env.GITHUB_REPO
+    
+    if (!owner || !repo) {
+      console.error('Missing GitHub configuration:', { owner, repo })
+      return NextResponse.json(
+        { error: 'GitHub repository not configured. Please set GITHUB_OWNER and GITHUB_REPO environment variables.' },
+        { status: 500 }
+      )
+    }
     
     try {
       const response = await fetch(
