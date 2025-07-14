@@ -1,0 +1,43 @@
+name: Refresh All Watchlist Stocks
+
+on:
+  # Run daily at 2 AM UTC (9 PM EST / 10 PM EDT)
+  schedule:
+    - cron: '0 2 * * *'
+  
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  refresh-stocks:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          cd scripts
+          npm install
+      
+      - name: Run refresh all stocks script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cd scripts
+          node refresh-all-stocks.js
+      
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: refresh-logs-${{ github.run_id }}
+          path: scripts/refresh-logs-*.txt
+          retention-days: 7

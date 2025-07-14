@@ -142,10 +142,10 @@ export default function EarningsDashboard() {
     // Get unique tickers from earnings data
     const uniqueTickers = [...new Set(earningsData.map(d => d.ticker))]
     
-    // Show warning modal
-    const totalSeconds = uniqueTickers.length * 45
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    // Show warning modal - estimate 45 seconds per stock for user expectation
+    const estimatedSeconds = uniqueTickers.length * 45
+    const hours = Math.floor(estimatedSeconds / 3600)
+    const minutes = Math.floor((estimatedSeconds % 3600) / 60)
     const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes} minutes`
     
     const confirmed = confirm(
@@ -206,9 +206,9 @@ export default function EarningsDashboard() {
         errors.push(`${ticker}: ${err instanceof Error ? err.message : 'Unknown error'}`)
       }
 
-      // Wait 45 seconds between requests (except for the last one or if cancelled)
+      // Wait 1 second between requests (except for the last one or if cancelled)
       if (i < uniqueTickers.length - 1 && !cancelRefreshRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 45000))
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
     }
 
