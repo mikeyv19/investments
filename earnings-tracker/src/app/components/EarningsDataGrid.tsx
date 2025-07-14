@@ -266,30 +266,139 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
         properties: {},
         children: [
           new Paragraph({
-            text: `${month} Earnings Dates`,
-            heading: HeadingLevel.HEADING_1,
+            children: [
+              new TextRun({
+                text: `${month} Earnings Dates`,
+                font: 'Calibri',
+                size: 32,
+                bold: true
+              })
+            ],
             alignment: AlignmentType.CENTER,
-            spacing: { after: 200 },
-            run: {
-              font: 'Calibri'
-            }
+            spacing: { after: 200 }
           }),
-          ...Object.entries(days).flatMap(([day, stocks]) => [
-            new Paragraph({
-              text: day,
-              heading: HeadingLevel.HEADING_2,
-              spacing: { before: 200, after: 100 },
-              run: {
-                font: 'Calibri'
+          ...Object.entries(days).flatMap(([day, stocks]) => {
+            const elements: (Paragraph | Table)[] = []
+            
+            // Add day header
+            elements.push(new Paragraph({
+              children: [
+                new TextRun({
+                  text: day,
+                  font: 'Calibri',
+                  size: 24,
+                  bold: true
+                })
+              ],
+              spacing: { before: 200, after: 100 }
+            }))
+            
+            // If there's more than one stock for this date, use two-column layout
+            if (stocks.length > 1) {
+              // Create table for two-column layout
+              const rows: TableRow[] = []
+              
+              // Process stocks in pairs
+              for (let i = 0; i < stocks.length; i += 2) {
+                const leftStock = stocks[i]
+                const rightStock = stocks[i + 1]
+                
+                const leftContent = (() => {
+                  const timing = leftStock.market_timing === 'before' ? 'Before' : 
+                               leftStock.market_timing === 'after' ? 'After' : 'During'
+                  const epsEstimate = leftStock.eps_estimate ? leftStock.eps_estimate.toFixed(2) : 'N/A'
+                  const yearAgoEps = leftStock.year_ago_eps ? leftStock.year_ago_eps.toFixed(2) : 'N/A'
+                  
+                  return new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: `${leftStock.ticker}`,
+                        bold: true,
+                        font: 'Calibri',
+                        size: 20
+                      }),
+                      new TextRun({
+                        text: `—${timing}; Est: ${epsEstimate} (yr ago: ${yearAgoEps})`,
+                        font: 'Calibri',
+                        size: 20
+                      })
+                    ]
+                  })
+                })()
+                
+                const rightContent = rightStock ? (() => {
+                  const timing = rightStock.market_timing === 'before' ? 'Before' : 
+                               rightStock.market_timing === 'after' ? 'After' : 'During'
+                  const epsEstimate = rightStock.eps_estimate ? rightStock.eps_estimate.toFixed(2) : 'N/A'
+                  const yearAgoEps = rightStock.year_ago_eps ? rightStock.year_ago_eps.toFixed(2) : 'N/A'
+                  
+                  return new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: `${rightStock.ticker}`,
+                        bold: true,
+                        font: 'Calibri',
+                        size: 20
+                      }),
+                      new TextRun({
+                        text: `—${timing}; Est: ${epsEstimate} (yr ago: ${yearAgoEps})`,
+                        font: 'Calibri',
+                        size: 20
+                      })
+                    ]
+                  })
+                })() : new Paragraph({ text: '' })
+                
+                rows.push(new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [leftContent],
+                      width: { size: 48, type: WidthType.PERCENTAGE },
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 },
+                        bottom: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 },
+                        left: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 },
+                        right: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 }
+                      }
+                    }),
+                    new TableCell({
+                      children: [new Paragraph({ text: '' })], // Spacer column
+                      width: { size: 4, type: WidthType.PERCENTAGE },
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 },
+                        bottom: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 },
+                        left: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 },
+                        right: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 }
+                      }
+                    }),
+                    new TableCell({
+                      children: [rightContent],
+                      width: { size: 48, type: WidthType.PERCENTAGE },
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 },
+                        bottom: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 },
+                        left: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 },
+                        right: { style: BorderStyle.SINGLE, color: 'FFFFFF', size: 0 }
+                      }
+                    })
+                  ]
+                }))
               }
-            }),
-            ...stocks.map(stock => {
+              
+              // Add table to document
+              elements.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: rows
+              }))
+            } else {
+              // Single stock, use original format
+              const stock = stocks[0]
               const timing = stock.market_timing === 'before' ? 'Before' : 
                            stock.market_timing === 'after' ? 'After' : 'During'
               const epsEstimate = stock.eps_estimate ? stock.eps_estimate.toFixed(2) : 'N/A'
               const yearAgoEps = stock.year_ago_eps ? stock.year_ago_eps.toFixed(2) : 'N/A'
               
-              return new Paragraph({
+              elements.push(new Paragraph({
                 children: [
                   new TextRun({
                     text: `${stock.ticker}`,
@@ -302,10 +411,16 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   })
                 ],
                 spacing: { after: 50 }
-              })
-            }),
-            new Paragraph({ text: '', spacing: { after: 100 } }) // Empty line between days
-          ])
+              }))
+            }
+            
+            // Add empty line between days only if it's a single stock (not after table)
+            if (stocks.length === 1) {
+              elements.push(new Paragraph({ text: '', spacing: { after: 100 } }))
+            }
+            
+            return elements
+          })
         ]
       }))
     })
