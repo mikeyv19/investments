@@ -11,9 +11,12 @@ const { createClient } = require('@supabase/supabase-js')
 const puppeteer = require('puppeteer')
 const path = require('path')
 const { scrapeEarningsWhispers } = require('./scrape-earnings-whispers')
+const { getPuppeteerOptions } = require('./chrome-finder')
 
-// Set Puppeteer cache directory
-process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer')
+// Set Puppeteer cache directory (only if not skipping download)
+if (process.env.PUPPETEER_SKIP_DOWNLOAD !== 'true') {
+  process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer')
+}
 
 // Environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -427,12 +430,14 @@ async function scrapeEarningsData() {
     console.log(`Found ${tickers.length} unique tickers:`, tickers.join(', '))
     console.log('')
 
-    // Launch browser with local cache
-    const browser = await puppeteer.launch({
-      headless: process.env.DEBUG_SCRAPER ? false : 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: puppeteer.executablePath()
-    })
+    // Launch browser with environment-specific options
+    const puppeteerOptions = getPuppeteerOptions();
+    console.log('Launching browser with options:', {
+      ...puppeteerOptions,
+      args: puppeteerOptions.args.slice(0, 3) + '...' // Log first few args
+    });
+    
+    const browser = await puppeteer.launch(puppeteerOptions)
     
     if (process.env.DEBUG_SCRAPER) {
       console.log('Running in debug mode with visible browser...')

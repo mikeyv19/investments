@@ -39,7 +39,8 @@
       "Bash(cp:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(PUPPETEER_SKIP_DOWNLOAD=true npm install)"
     ],
     "deny": []
   }

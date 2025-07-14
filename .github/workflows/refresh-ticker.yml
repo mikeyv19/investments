@@ -28,47 +28,54 @@ jobs:
         cache: 'npm'
         cache-dependency-path: 'earnings-tracker/scripts/package-lock.json'
     
-    - name: Install dependencies
-      working-directory: earnings-tracker/scripts
-      timeout-minutes: 5
-      env:
-        PUPPETEER_SKIP_DOWNLOAD: true
-      run: |
-        echo "Installing npm dependencies (skipping Chrome download)..."
-        npm install --no-audit --no-fund
-        echo "npm install completed"
-        
-    - name: Install Puppeteer Chrome
-      working-directory: earnings-tracker/scripts
-      timeout-minutes: 5
-      run: |
-        echo "Installing Puppeteer Chrome browser..."
-        npx puppeteer browsers install chrome
-        echo "Chrome installation completed"
-    
-    - name: Install Puppeteer system dependencies
+    - name: Install Chrome dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          libnss3 \
+          chromium-browser \
+          chromium-chromedriver \
+          fonts-liberation \
+          libasound2 \
           libatk-bridge2.0-0 \
+          libatk1.0-0 \
+          libatspi2.0-0 \
+          libcups2 \
+          libdbus-1-3 \
           libdrm2 \
+          libgbm1 \
+          libgtk-3-0 \
+          libnspr4 \
+          libnss3 \
           libxcomposite1 \
           libxdamage1 \
           libxfixes3 \
-          libxrandr2 \
-          libgbm1 \
           libxkbcommon0 \
-          libasound2
+          libxrandr2 \
+          xdg-utils
+        echo "Chrome path: $(which chromium-browser || which chromium || which google-chrome || echo 'not found')"
+    
+    - name: Install dependencies
+      working-directory: earnings-tracker/scripts
+      env:
+        PUPPETEER_SKIP_DOWNLOAD: true
+      run: |
+        echo "Installing npm dependencies (Chrome download disabled)..."
+        npm install
+        echo "Dependencies installed successfully"
     
     - name: Run scraper for ${{ github.event.inputs.ticker }}
       working-directory: earnings-tracker/scripts
       env:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        PUPPETEER_SKIP_DOWNLOAD: true
+        PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+        CI: true
       run: |
         echo "Starting refresh for ticker: ${{ github.event.inputs.ticker }}"
         echo "Triggered by: ${{ github.event.inputs.triggered_by }}"
+        echo "Chrome/Chromium available at:"
+        which chromium-browser || which chromium || which google-chrome || echo "No Chrome found in PATH"
         node scrape-single-stock.js ${{ github.event.inputs.ticker }}
     
     - name: Report status

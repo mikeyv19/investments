@@ -27,8 +27,34 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       
+      - name: Install Chrome dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            chromium-browser \
+            libgbm1 \
+            libasound2 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libgtk-3-0 \
+            libnspr4 \
+            libnss3 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libxss1 \
+            libxtst6 \
+            fonts-liberation \
+            libappindicator3-1 \
+            xdg-utils
+      
       - name: Install dependencies
         working-directory: earnings-tracker/scripts
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: true
         run: npm install
       
       - name: Check watchlist stocks
@@ -59,6 +85,16 @@ jobs:
           checkWatchlists().catch(console.error);
           "
       
+      - name: Test Chrome launch
+        working-directory: earnings-tracker/scripts
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+          PUPPETEER_SKIP_DOWNLOAD: true
+          CI: true
+        run: |
+          echo "Testing Chrome/Chromium launch..."
+          node test-chrome-launch.js
+      
       - name: Cleanup past earnings dates
         working-directory: earnings-tracker/scripts
         env:
@@ -73,6 +109,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+          PUPPETEER_SKIP_DOWNLOAD: true
         run: node scrape-watchlist-with-sec.js
       
       - name: Upload logs on failure

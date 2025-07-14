@@ -6,9 +6,12 @@
 const { createClient } = require('@supabase/supabase-js')
 const puppeteer = require('puppeteer')
 const path = require('path')
+const { getPuppeteerOptions } = require('./chrome-finder')
 
-// Set Puppeteer cache directory
-process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer')
+// Set Puppeteer cache directory (only if not skipping download)
+if (process.env.PUPPETEER_SKIP_DOWNLOAD !== 'true') {
+  process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer')
+}
 
 // Environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -180,10 +183,7 @@ async function scrapeSingleStock(ticker) {
 
     // Fetch Yahoo Finance data
     console.log('\nFetching Yahoo Finance data (including historical EPS)...')
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    })
+    const browser = await puppeteer.launch(getPuppeteerOptions())
 
     const yahooData = await scrapeYahooFinance(ticker, browser)
     console.log('   Yahoo data received:', JSON.stringify({

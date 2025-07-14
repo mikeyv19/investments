@@ -3,6 +3,7 @@
  */
 
 const puppeteer = require('puppeteer')
+const { getPuppeteerOptions } = require('./chrome-finder')
 
 /**
  * Parse earnings time and determine market timing
