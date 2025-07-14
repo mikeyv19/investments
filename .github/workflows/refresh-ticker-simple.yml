@@ -1,4 +1,4 @@
-name: Refresh Single Ticker Data
+name: Refresh Single Ticker Data (Simple)
 
 on:
   workflow_dispatch:
@@ -25,47 +25,34 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: 'earnings-tracker/scripts/package-lock.json'
     
-    - name: Install dependencies
+    - name: Install script dependencies
       working-directory: earnings-tracker/scripts
-      timeout-minutes: 5
-      env:
-        PUPPETEER_SKIP_DOWNLOAD: true
       run: |
-        echo "Installing npm dependencies (skipping Chrome download)..."
-        npm install --no-audit --no-fund
-        echo "npm install completed"
-        
-    - name: Install Puppeteer Chrome
-      working-directory: earnings-tracker/scripts
-      timeout-minutes: 5
-      run: |
-        echo "Installing Puppeteer Chrome browser..."
-        npx puppeteer browsers install chrome
-        echo "Chrome installation completed"
+        echo "Current directory: $(pwd)"
+        echo "Files in directory:"
+        ls -la
+        echo "Installing dependencies..."
+        npm install @supabase/supabase-js dotenv
+        echo "Dependencies installed"
     
-    - name: Install Puppeteer system dependencies
+    - name: Setup Puppeteer
+      uses: browser-actions/setup-chrome@v1
+      with:
+        chrome-version: stable
+    
+    - name: Install Puppeteer
+      working-directory: earnings-tracker/scripts
       run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          libnss3 \
-          libatk-bridge2.0-0 \
-          libdrm2 \
-          libxcomposite1 \
-          libxdamage1 \
-          libxfixes3 \
-          libxrandr2 \
-          libgbm1 \
-          libxkbcommon0 \
-          libasound2
+        npm install puppeteer@21.11.0
+        echo "Puppeteer installed"
     
     - name: Run scraper for ${{ github.event.inputs.ticker }}
       working-directory: earnings-tracker/scripts
       env:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
       run: |
         echo "Starting refresh for ticker: ${{ github.event.inputs.ticker }}"
         echo "Triggered by: ${{ github.event.inputs.triggered_by }}"
