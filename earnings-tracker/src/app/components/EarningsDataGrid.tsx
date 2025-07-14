@@ -150,14 +150,8 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
     })
   }, [filteredData, gridState.sortBy])
 
-  // Pagination
-  const paginatedData = useMemo(() => {
-    const start = (gridState.page - 1) * gridState.pageSize
-    const end = start + gridState.pageSize
-    return sortedData.slice(start, end)
-  }, [sortedData, gridState.page, gridState.pageSize])
-
-  const totalPages = Math.ceil(sortedData.length / gridState.pageSize)
+  // No pagination - show all data with scrollbar
+  const displayData = sortedData
 
   // Sort handler
   const handleSort = (field: keyof EarningsGridData) => {
@@ -708,7 +702,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
           type="text"
           placeholder="Search all columns..."
           value={gridState.globalSearch}
-          onChange={(e) => setGridState(prev => ({ ...prev, globalSearch: e.target.value, page: 1 }))}
+          onChange={(e) => setGridState(prev => ({ ...prev, globalSearch: e.target.value }))}
           className="input w-64"
         />
         
@@ -722,7 +716,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
             </button>
             
             {showColumnMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border z-10">
+              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border z-20">
                 <div className="p-2">
                   <div className="text-sm font-semibold text-foreground px-2 py-1">Show/Hide Columns</div>
                   {columnDefinitions.map(col => (
@@ -750,7 +744,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
             </button>
             
             {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border z-10">
+              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border z-20">
                 <div className="py-1">
                   <button
                     onClick={exportToWord}
@@ -778,9 +772,10 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
       </div>
 
       {/* Data Grid */}
-      <div className="overflow-x-auto border border-border rounded-lg bg-card">
+      <div className="border border-border rounded-lg bg-card">
+        <div className={`overflow-x-auto ${sortedData.length > 12 ? 'max-h-[600px] overflow-y-auto' : ''}`}>
         <table className="min-w-full">
-          <thead className="bg-gradient-to-r from-muted/30 via-muted/50 to-muted/30">
+          <thead className="bg-gradient-to-r from-muted via-muted/90 to-muted sticky top-0 z-10 backdrop-blur-sm">
             <tr>
               <th className="px-2 py-3 text-center">
                 <div className="text-xs font-medium text-foreground" title="Refresh">
@@ -935,7 +930,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
           </thead>
           
           <tbody className="bg-card divide-y divide-border">
-            {paginatedData.map((row, idx) => {
+            {displayData.map((row, idx) => {
               const isRefreshing = refreshingTickers.has(row.ticker)
               const hasRefreshStatus = refreshStatus[row.ticker]
               
@@ -1051,37 +1046,12 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
-      {/* Pagination */}
-      <div className="mt-4 flex justify-between items-center">
-        <div className="text-sm text-foreground">
-          Showing {((gridState.page - 1) * gridState.pageSize) + 1} to{' '}
-          {Math.min(gridState.page * gridState.pageSize, sortedData.length)} of{' '}
-          {sortedData.length} results
-        </div>
-        
-        <div className="flex gap-2">
-          <button
-            onClick={() => setGridState(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
-            disabled={gridState.page === 1}
-            className="px-3 py-1 border border-border rounded-lg disabled:opacity-50 hover:bg-accent transition-colors"
-          >
-            Previous
-          </button>
-          
-          <span className="px-3 py-1">
-            Page {gridState.page} of {totalPages}
-          </span>
-          
-          <button
-            onClick={() => setGridState(prev => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))}
-            disabled={gridState.page === totalPages}
-            className="px-3 py-1 border border-border rounded-lg disabled:opacity-50 hover:bg-accent transition-colors"
-          >
-            Next
-          </button>
-        </div>
+      {/* Results Count */}
+      <div className="mt-4 text-sm text-foreground">
+        Showing {sortedData.length} result{sortedData.length !== 1 ? 's' : ''}
       </div>
     </div>
   )

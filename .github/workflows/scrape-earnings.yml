@@ -59,12 +59,21 @@ jobs:
           checkWatchlists().catch(console.error);
           "
       
+      - name: Cleanup past earnings dates
+        working-directory: earnings-tracker/scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "Cleaning up past earnings dates..."
+          node cleanup-past-earnings.js
+      
       - name: Run earnings scraper (watchlist only)
         working-directory: earnings-tracker/scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node scrape-earnings-watchlist.js
+        run: node scrape-watchlist-with-sec.js
       
       - name: Upload logs on failure
         if: failure()

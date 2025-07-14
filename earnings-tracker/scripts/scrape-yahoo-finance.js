@@ -366,9 +366,21 @@ async function updateDatabase(scrapedData) {
 
       // Update or insert earnings estimate
       if (data.earningsDate) {
+        // First, delete any existing earnings estimates for this company
+        // This ensures we only keep the latest upcoming earnings date
+        const { error: deleteError } = await supabase
+          .from('earnings_estimates')
+          .delete()
+          .eq('company_id', company.id)
+        
+        if (deleteError) {
+          console.error(`  Error deleting old earnings for ${data.ticker}:`, deleteError)
+        }
+
+        // Now insert the new earnings estimate
         const { error } = await supabase
           .from('earnings_estimates')
-          .upsert({
+          .insert({
             company_id: company.id,
             earnings_date: data.earningsDate,
             earnings_date_range: data.earningsDateRange,
@@ -377,9 +389,6 @@ async function updateDatabase(scrapedData) {
             eps_estimate: data.epsEstimate,
             year_ago_eps: data.yearAgoEPS,
             last_updated: new Date().toISOString()
-          }, {
-            onConflict: 'company_id,earnings_date',
-            ignoreDuplicates: false
           })
 
         if (error) {

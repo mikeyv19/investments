@@ -323,30 +323,33 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
         </div>
 
         {isCreating && (
-          <div className="mb-3 flex gap-2">
+          <div className="mb-3">
             <input
               type="text"
               value={newWatchlistName}
               onChange={(e) => setNewWatchlistName(e.target.value)}
               placeholder="Watchlist name"
-              className="flex-1 input"
+              className="w-full mb-2 input text-sm"
               onKeyPress={(e) => e.key === 'Enter' && createWatchlist()}
+              autoFocus
             />
-            <button
-              onClick={createWatchlist}
-              className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-            >
-              Create
-            </button>
-            <button
-              onClick={() => {
-                setIsCreating(false)
-                setNewWatchlistName('')
-              }}
-              className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
-            >
-              Cancel
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={createWatchlist}
+                className="flex-1 px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+              >
+                Create
+              </button>
+              <button
+                onClick={() => {
+                  setIsCreating(false)
+                  setNewWatchlistName('')
+                }}
+                className="flex-1 px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 
@@ -457,11 +460,17 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
       {/* Selected Watchlist Stocks */}
       {selectedWatchlist && (
         <div>
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-semibold text-foreground">
+          <div className="mb-3">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Stocks in {watchlists.find(w => w.id === selectedWatchlist)?.name}
             </h3>
             <div className="flex gap-2">
+              <button
+                onClick={() => setShowBulkImport(true)}
+                className="text-sm px-3 py-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+              >
+                Bulk Import
+              </button>
               {selectedStocks.size > 0 && (
                 <button
                   onClick={bulkRemoveStocks}
@@ -470,12 +479,6 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
                   Remove {selectedStocks.size} Selected
                 </button>
               )}
-              <button
-                onClick={() => setShowBulkImport(true)}
-                className="text-sm px-3 py-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
-              >
-                Bulk Import
-              </button>
             </div>
           </div>
 
@@ -513,7 +516,7 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className={`space-y-2 ${watchlistStocks.length > 7 ? 'max-h-[336px] overflow-y-auto pr-2' : ''}`}>
             {watchlistStocks.map(stock => {
               const ticker = stock.company?.ticker || ''
               const isSelected = selectedStocks.has(ticker)
@@ -535,9 +538,6 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
                   />
                   <div className="flex-1">
                     <span className="font-semibold">{ticker}</span>
-                    <span className="ml-2 text-muted-foreground">
-                      {stock.company?.company_name}
-                    </span>
                   </div>
                   <button
                     onClick={() => removeStock(ticker)}
