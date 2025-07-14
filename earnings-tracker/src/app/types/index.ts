@@ -46,6 +46,7 @@ export interface EarningsEstimate {
   id: string
   company_id: string
   earnings_date: string
+  earnings_date_range?: string | null // e.g., "Jul 28, 2025 - Aug 1, 2025"
   market_timing: 'before' | 'after' // before or after market
   eps_estimate: number
   last_updated: string
@@ -94,6 +95,7 @@ export interface EarningsGridData {
   ticker: string
   company_name: string
   earnings_date: string
+  earnings_date_range?: string | null // e.g., "Jul 28, 2025 - Aug 1, 2025"
   market_timing: 'before' | 'after' | 'during'
   earnings_time: string | null
   eps_estimate: number | null

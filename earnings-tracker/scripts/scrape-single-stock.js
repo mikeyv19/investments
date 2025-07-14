@@ -253,10 +253,8 @@ async function scrapeSingleStock(ticker) {
           last_updated: new Date().toISOString()
         }
         
-        // Only add earnings_date_range if it exists
-        if (mergedData.earningsDateRange) {
-          updateData.earnings_date_range = mergedData.earningsDateRange
-        }
+        // Always set earnings_date_range (null if no range)
+        updateData.earnings_date_range = mergedData.earningsDateRange || null
         
         console.log('   Attempting to save:', JSON.stringify({
           earnings_date: updateData.earnings_date,

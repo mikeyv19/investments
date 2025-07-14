@@ -873,7 +873,30 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   
                   {columnVisibility.earnings_date && (
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-muted-foreground">
-                      {new Date(row.earnings_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      <div className="flex items-center gap-1">
+                        {new Date(row.earnings_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {row.earnings_date_range && (
+                          <div className="relative group">
+                            <svg 
+                              className="w-4 h-4 text-yellow-500/70 hover:text-yellow-400 cursor-help" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                              />
+                            </svg>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-gray-200 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                              {row.earnings_date_range}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-0 h-0 border-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   )}
                   
