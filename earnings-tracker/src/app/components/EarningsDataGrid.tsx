@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { EarningsGridData, SortConfig, FilterConfig, GridState, ColumnVisibility } from '@/app/types'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType, VerticalAlign } from 'docx'
 
 interface EarningsDataGridProps {
   data: EarningsGridData[]
@@ -32,26 +33,30 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
   const [refreshStatus, setRefreshStatus] = useState<Record<string, string>>({})
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>(DEFAULT_COLUMN_VISIBILITY)
   const [showColumnMenu, setShowColumnMenu] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
 
   // Load column visibility preferences on mount
   useEffect(() => {
     loadColumnVisibility()
   }, [])
 
-  // Handle click outside to close column menu
+  // Handle click outside to close menus
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement
       if (!target.closest('.column-menu-container')) {
         setShowColumnMenu(false)
       }
+      if (!target.closest('.export-menu-container')) {
+        setShowExportMenu(false)
+      }
     }
 
-    if (showColumnMenu) {
+    if (showColumnMenu || showExportMenu) {
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [showColumnMenu])
+  }, [showColumnMenu, showExportMenu])
 
   const loadColumnVisibility = async () => {
     try {
@@ -218,7 +223,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
       .filter(col => visibleColumns.includes(col))
       .join(',')
     
-    const rows = paginatedData.map(row => 
+    const rows = sortedData.map(row => 
       visibleColumns.map(col => `"${row[col as keyof EarningsGridData] || ''}"`).join(',')
     ).join('\n')
     
@@ -227,9 +232,347 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `earnings-data-${new Date().toISOString().split('T')[0]}.csv`
+    const dateStr = new Date().toISOString().slice(2,10).replace(/-/g,'-') // YY-MM-DD
+    a.download = `${dateStr} Earnings Cal List.csv`
     a.click()
     URL.revokeObjectURL(url)
+    setShowExportMenu(false)
+  }
+
+  // Export to Word Document
+  const exportToWord = async () => {
+    // Group data by month
+    const groupedByMonth = sortedData.reduce((acc, row) => {
+      const date = new Date(row.earnings_date + 'T00:00:00')
+      const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+      
+      if (!acc[monthKey]) {
+        acc[monthKey] = {}
+      }
+      
+      const dayKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      
+      if (!acc[monthKey][dayKey]) {
+        acc[monthKey][dayKey] = []
+      }
+      
+      acc[monthKey][dayKey].push(row)
+      return acc
+    }, {} as Record<string, Record<string, EarningsGridData[]>>)
+
+    // Create document
+    const doc = new Document({
+      sections: Object.entries(groupedByMonth).map(([month, days]) => ({
+        properties: {},
+        children: [
+          new Paragraph({
+            text: `${month} Earnings Dates`,
+            heading: HeadingLevel.HEADING_1,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 },
+            run: {
+              font: 'Calibri'
+            }
+          }),
+          ...Object.entries(days).flatMap(([day, stocks]) => [
+            new Paragraph({
+              text: day,
+              heading: HeadingLevel.HEADING_2,
+              spacing: { before: 200, after: 100 },
+              run: {
+                font: 'Calibri'
+              }
+            }),
+            ...stocks.map(stock => {
+              const timing = stock.market_timing === 'before' ? 'Before' : 
+                           stock.market_timing === 'after' ? 'After' : 'During'
+              const epsEstimate = stock.eps_estimate ? stock.eps_estimate.toFixed(2) : 'N/A'
+              const yearAgoEps = stock.year_ago_eps ? stock.year_ago_eps.toFixed(2) : 'N/A'
+              
+              return new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `${stock.ticker}`,
+                    bold: true,
+                    font: 'Calibri'
+                  }),
+                  new TextRun({
+                    text: `—${timing}; Estimate: ${epsEstimate} (yr. ago: ${yearAgoEps})`,
+                    font: 'Calibri'
+                  })
+                ],
+                spacing: { after: 50 }
+              })
+            }),
+            new Paragraph({ text: '', spacing: { after: 100 } }) // Empty line between days
+          ])
+        ]
+      }))
+    })
+
+    // Generate and download
+    const blob = await Packer.toBlob(doc)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const dateStr = new Date().toISOString().slice(2,10).replace(/-/g,'-') // YY-MM-DD
+    a.download = `${dateStr} Earnings Cal List.docx`
+    a.click()
+    URL.revokeObjectURL(url)
+    setShowExportMenu(false)
+  }
+
+  // Export to Word Document - Format 2 (Improved)
+  const exportToWordFormat2 = async () => {
+    // Group data by month
+    const groupedByMonth = sortedData.reduce((acc, row) => {
+      const date = new Date(row.earnings_date + 'T00:00:00')
+      const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+      
+      if (!acc[monthKey]) {
+        acc[monthKey] = []
+      }
+      
+      acc[monthKey].push(row)
+      return acc
+    }, {} as Record<string, EarningsGridData[]>)
+
+    // Create document with tables
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            margin: {
+              top: 720,    // 0.5 inch
+              right: 720,  // 0.5 inch
+              bottom: 720, // 0.5 inch
+              left: 720    // 0.5 inch
+            }
+          }
+        },
+        children: [
+          new Paragraph({
+            children: [new TextRun({
+              text: 'Earnings Calendar',
+              font: 'Calibri',
+              size: 28,
+              bold: true
+            })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 50 }
+          }),
+          new Paragraph({
+            children: [new TextRun({
+              text: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+              font: 'Calibri',
+              size: 18
+            })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 100 }
+          }),
+          ...Object.entries(groupedByMonth).flatMap(([month, stocks]) => {
+            // Group by date within month
+            const byDate = stocks.reduce((acc, stock) => {
+              const date = new Date(stock.earnings_date + 'T00:00:00')
+              const dayKey = date.getDate()
+              if (!acc[dayKey]) acc[dayKey] = []
+              acc[dayKey].push(stock)
+              return acc
+            }, {} as Record<number, EarningsGridData[]>)
+
+            return [
+              new Paragraph({
+                children: [new TextRun({
+                  text: month,
+                  font: 'Calibri',
+                  size: 24,
+                  bold: true
+                })],
+                spacing: { before: 100, after: 50 }
+              }),
+              new Table({
+                width: {
+                  size: 100,
+                  type: WidthType.PERCENTAGE
+                },
+                rows: [
+                  // Header row
+                  new TableRow({
+                    tableHeader: true,
+                    children: [
+                      new TableCell({
+                        children: [new Paragraph({ 
+                          children: [new TextRun({ text: 'Date', font: 'Calibri', bold: true })]
+                        })],
+                        shading: { type: ShadingType.SOLID, color: 'E0E0E0' },
+                        width: { size: 10, type: WidthType.PERCENTAGE }
+                      }),
+                      new TableCell({
+                        children: [new Paragraph({ 
+                          children: [new TextRun({ text: 'Ticker', font: 'Calibri', bold: true })]
+                        })],
+                        shading: { type: ShadingType.SOLID, color: 'E0E0E0' },
+                        width: { size: 10, type: WidthType.PERCENTAGE }
+                      }),
+                      new TableCell({
+                        children: [new Paragraph({ 
+                          children: [new TextRun({ text: 'Company', font: 'Calibri', bold: true })]
+                        })],
+                        shading: { type: ShadingType.SOLID, color: 'E0E0E0' },
+                        width: { size: 30, type: WidthType.PERCENTAGE }
+                      }),
+                      new TableCell({
+                        children: [new Paragraph({ 
+                          children: [new TextRun({ text: 'Time', font: 'Calibri', bold: true })]
+                        })],
+                        shading: { type: ShadingType.SOLID, color: 'E0E0E0' },
+                        width: { size: 10, type: WidthType.PERCENTAGE }
+                      }),
+                      new TableCell({
+                        children: [new Paragraph({ 
+                          children: [new TextRun({ text: 'EPS Est.', font: 'Calibri', bold: true })]
+                        })],
+                        shading: { type: ShadingType.SOLID, color: 'E0E0E0' },
+                        width: { size: 15, type: WidthType.PERCENTAGE }
+                      }),
+                      new TableCell({
+                        children: [new Paragraph({ 
+                          children: [new TextRun({ text: 'Yr Ago', font: 'Calibri', bold: true })]
+                        })],
+                        shading: { type: ShadingType.SOLID, color: 'E0E0E0' },
+                        width: { size: 15, type: WidthType.PERCENTAGE }
+                      }),
+                      new TableCell({
+                        children: [new Paragraph({ 
+                          children: [new TextRun({ text: 'Change', font: 'Calibri', bold: true })]
+                        })],
+                        shading: { type: ShadingType.SOLID, color: 'E0E0E0' },
+                        width: { size: 10, type: WidthType.PERCENTAGE }
+                      })
+                    ]
+                  }),
+                  // Data rows
+                  ...Object.entries(byDate)
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .flatMap(([day, dayStocks], dayIdx) => [
+                      // Date header row
+                      new TableRow({
+                        children: [
+                          new TableCell({
+                            children: [new Paragraph({ 
+                              children: [new TextRun({
+                                text: new Date(dayStocks[0].earnings_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                                font: 'Calibri',
+                                size: 18,
+                                bold: true
+                              })]
+                            })],
+                            columnSpan: 7,
+                            shading: { type: ShadingType.SOLID, color: 'F2F2F2' },
+                            verticalAlign: VerticalAlign.CENTER
+                          })
+                        ]
+                      }),
+                      // Stock rows for this date
+                      ...dayStocks.map((stock, stockIdx) => {
+                        const timing = stock.market_timing === 'before' ? 'Before' : 
+                                     stock.market_timing === 'after' ? 'After' : 'During'
+                        const epsEst = stock.eps_estimate || 0
+                        const yrAgo = stock.year_ago_eps || 0
+                        const change = epsEst && yrAgo ? ((epsEst - yrAgo) / Math.abs(yrAgo) * 100).toFixed(0) + '%' : 'N/A'
+                        const changeColor = epsEst > yrAgo ? '00B050' : epsEst < yrAgo ? 'C00000' : '000000'
+                        
+                        return new TableRow({
+                          children: [
+                            new TableCell({
+                              children: [new Paragraph({ text: '' })],
+                              width: { size: 10, type: WidthType.PERCENTAGE }
+                            }),
+                            new TableCell({
+                              children: [new Paragraph({ 
+                                children: [new TextRun({
+                                  text: stock.ticker,
+                                  font: 'Calibri',
+                                  bold: true,
+                                  size: 20
+                                })]
+                              })],
+                              verticalAlign: VerticalAlign.CENTER
+                            }),
+                            new TableCell({
+                              children: [new Paragraph({ 
+                                children: [new TextRun({
+                                  text: stock.company_name,
+                                  font: 'Calibri',
+                                  size: 18
+                                })]
+                              })],
+                              verticalAlign: VerticalAlign.CENTER
+                            }),
+                            new TableCell({
+                              children: [new Paragraph({ 
+                                children: [new TextRun({
+                                  text: timing,
+                                  font: 'Calibri',
+                                  size: 18
+                                })]
+                              })],
+                              verticalAlign: VerticalAlign.CENTER
+                            }),
+                            new TableCell({
+                              children: [new Paragraph({ 
+                                children: [new TextRun({
+                                  text: epsEst ? `$${epsEst.toFixed(2)}` : 'N/A',
+                                  font: 'Calibri',
+                                  size: 18,
+                                  bold: true
+                                })]
+                              })],
+                              verticalAlign: VerticalAlign.CENTER
+                            }),
+                            new TableCell({
+                              children: [new Paragraph({ 
+                                children: [new TextRun({
+                                  text: yrAgo ? `$${yrAgo.toFixed(2)}` : 'N/A',
+                                  font: 'Calibri',
+                                  size: 18
+                                })]
+                              })],
+                              verticalAlign: VerticalAlign.CENTER
+                            }),
+                            new TableCell({
+                              children: [new Paragraph({ 
+                                children: [new TextRun({
+                                  text: change,
+                                  font: 'Calibri',
+                                  size: 18
+                                })]
+                              })],
+                              verticalAlign: VerticalAlign.CENTER
+                            })
+                          ]
+                        })
+                      })
+                    ])
+                ]
+              }),
+              new Paragraph({ text: '', spacing: { after: 50 } }) // Space between months
+            ]
+          })
+        ]
+      }]
+    })
+
+    // Generate and download
+    const blob = await Packer.toBlob(doc)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const dateStr = new Date().toISOString().slice(2,10).replace(/-/g,'-') // YY-MM-DD
+    a.download = `${dateStr} Earnings Cal List (Format 2).docx`
+    a.click()
+    URL.revokeObjectURL(url)
+    setShowExportMenu(false)
   }
 
   const columnDefinitions = [
@@ -283,12 +626,39 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
             )}
           </div>
           
-          <button
-            onClick={exportToCSV}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Export CSV
-          </button>
+          <div className="relative export-menu-container">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Export
+            </button>
+            
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border z-10">
+                <div className="py-1">
+                  <button
+                    onClick={exportToWord}
+                    className="w-full text-left px-4 py-2 hover:bg-accent transition-colors text-sm"
+                  >
+                    Export to Word - Format 1
+                  </button>
+                  <button
+                    onClick={exportToWordFormat2}
+                    className="w-full text-left px-4 py-2 hover:bg-accent transition-colors text-sm"
+                  >
+                    Export to Word - Format 2
+                  </button>
+                  <button
+                    onClick={exportToCSV}
+                    className="w-full text-left px-4 py-2 hover:bg-accent transition-colors text-sm"
+                  >
+                    Export to CSV
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

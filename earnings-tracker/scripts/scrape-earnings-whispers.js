@@ -486,17 +486,18 @@ async function scrapeEarningsWhispers(ticker, browser) {
       console.log(`    - All span texts: ${JSON.stringify(earningsData.debug.allSpanTexts)}`)
       console.log(`    - CalData text content: "${earningsData.debug.calDataText}"`)
       
-      // Use the full date if available, otherwise parse the display date
-      if (earningsData.fullDate) {
-        result.earningsDate = earningsData.fullDate
-      } else if (earningsData.date) {
-        // Parse date like "Jul 31" and add current year
-        const currentYear = new Date().getFullYear()
-        const parsedDate = new Date(`${earningsData.date} ${currentYear}`)
-        if (!isNaN(parsedDate.getTime())) {
-          result.earningsDate = parsedDate.toISOString().split('T')[0]
-        }
-      }
+      // DO NOT use date from EarningsWhispers - only use for timing
+      // The date should always come from Yahoo Finance
+      // if (earningsData.fullDate) {
+      //   result.earningsDate = earningsData.fullDate
+      // } else if (earningsData.date) {
+      //   // Parse date like "Jul 31" and add current year
+      //   const currentYear = new Date().getFullYear()
+      //   const parsedDate = new Date(`${earningsData.date} ${currentYear}`)
+      //   if (!isNaN(parsedDate.getTime())) {
+      //     result.earningsDate = parsedDate.toISOString().split('T')[0]
+      //   }
+      // }
       
       if (earningsData.time) {
         result.earningsTime = earningsData.time
@@ -505,11 +506,22 @@ async function scrapeEarningsWhispers(ticker, browser) {
         result.earningsTime = earnings_time
       }
       
+      // Also check for market timing in the calData text
+      if (!result.marketTiming && earningsData.debug.calDataText) {
+        const calText = earningsData.debug.calDataText.toLowerCase()
+        if (calText.includes('before open') || calText.includes('before market')) {
+          result.marketTiming = 'before'
+          console.log('  Found "before open/market" in calendar data')
+        } else if (calText.includes('after close') || calText.includes('after market')) {
+          result.marketTiming = 'after'
+          console.log('  Found "after close/market" in calendar data')
+        }
+      }
+      
       result.confirmed = earningsData.confirmed
       
-      if (result.earningsDate || result.earningsTime) {
-        console.log(`  ✓ Found earnings data:`)
-        console.log(`    Date: ${result.earningsDate}`)
+      if (result.earningsTime || result.marketTiming) {
+        console.log(`  ✓ Found earnings timing data:`)
         console.log(`    Time: ${result.earningsTime}`)
         console.log(`    Market timing: ${result.marketTiming}`)
         console.log(`    Confirmed: ${result.confirmed}`)

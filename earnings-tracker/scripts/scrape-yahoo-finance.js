@@ -109,7 +109,9 @@ async function scrapeYahooFinance(ticker, browser) {
     })
 
     if (earningsDateText) {
-      result.earningsDate = parseEarningsDate(earningsDateText)
+      const parsedDate = parseEarningsDate(earningsDateText)
+      result.earningsDate = parsedDate.date
+      result.earningsDateRange = parsedDate.range
       console.log(`  Found earnings date: ${earningsDateText}`)
     } else {
       console.log(`  No earnings date found for ${ticker}`)
@@ -286,26 +288,44 @@ async function scrapeYahooFinance(ticker, browser) {
 
 /**
  * Parse earnings date string to ISO format
+ * Returns an object with the parsed date and original range (if applicable)
  */
 function parseEarningsDate(dateText) {
   try {
-    // Handle date ranges (e.g., "Jul 28 - Aug 1, 2025")
-    const dateMatch = dateText.match(/([A-Za-z]+\s+\d+)(?:\s*-\s*[A-Za-z]+\s+\d+)?,?\s+(\d{4})/)
-    if (dateMatch) {
-      const [_, firstDate, year] = dateMatch
+    // Handle date ranges (e.g., "Jul 28 - Aug 1, 2025" or "Jul 28, 2025 - Aug 1, 2025")
+    const rangeMatch = dateText.match(/([A-Za-z]+\s+\d+),?\s*(?:\d{4}\s*)?-\s*([A-Za-z]+\s+\d+),?\s+(\d{4})/)
+    if (rangeMatch) {
+      const [fullMatch, firstDate, secondDate, year] = rangeMatch
       const date = new Date(`${firstDate}, ${year}`)
-      return date.toISOString().split('T')[0]
+      return {
+        date: date.toISOString().split('T')[0],
+        range: dateText.trim() // Store the original range string
+      }
+    }
+    
+    // Handle single date (e.g., "Jul 28, 2025")
+    const dateMatch = dateText.match(/([A-Za-z]+\s+\d+),?\s+(\d{4})/)
+    if (dateMatch) {
+      const [_, monthDay, year] = dateMatch
+      const date = new Date(`${monthDay}, ${year}`)
+      return {
+        date: date.toISOString().split('T')[0],
+        range: null
+      }
     }
     
     // Try direct parsing
     const date = new Date(dateText)
     if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0]
+      return {
+        date: date.toISOString().split('T')[0],
+        range: null
+      }
     }
   } catch (error) {
     console.error('Error parsing date:', dateText, error)
   }
-  return null
+  return { date: null, range: null }
 }
 
 /**
@@ -351,6 +371,7 @@ async function updateDatabase(scrapedData) {
           .upsert({
             company_id: company.id,
             earnings_date: data.earningsDate,
+            earnings_date_range: data.earningsDateRange,
             market_timing: data.marketTiming || 'after',
             earnings_time: data.earningsTime,
             eps_estimate: data.epsEstimate,
@@ -419,11 +440,13 @@ async function scrapeEarningsData() {
       // Then get EarningsWhispers data for exact timing
       const whisperData = await scrapeEarningsWhispers(ticker, browser)
       
-      // Merge the data, preferring EarningsWhispers for date/time if available
+      // Merge the data - ALWAYS use Yahoo's date, only use EarningsWhispers for time
       const mergedData = {
         ...yahooData,
-        // Use EarningsWhispers date if available and it has time info
-        earningsDate: (whisperData.earningsDate && whisperData.earningsTime) ? whisperData.earningsDate : yahooData.earningsDate,
+        // Always use Yahoo Finance date, preserve the date range
+        earningsDate: yahooData.earningsDate,
+        earningsDateRange: yahooData.earningsDateRange,
+        // Only use EarningsWhispers for time and market timing
         earningsTime: whisperData.earningsTime,
         // Use precise market timing from EarningsWhispers if available
         marketTiming: whisperData.marketTiming || 'after'
@@ -477,4 +500,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { scrapeYahooFinance, scrapeEarningsData }
+module.exports = { scrapeYahooFinance, scrapeEarningsData, parseEarningsDate }

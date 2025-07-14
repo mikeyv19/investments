@@ -186,6 +186,10 @@ async function scrapeSingleStock(ticker) {
     })
 
     const yahooData = await scrapeYahooFinance(ticker, browser)
+    console.log('   Yahoo data received:', JSON.stringify({
+      earningsDate: yahooData.earningsDate,
+      earningsDateRange: yahooData.earningsDateRange
+    }, null, 2))
     
     // Also get EarningsWhispers data
     console.log('   Checking EarningsWhispers for exact timing...')
@@ -203,11 +207,14 @@ async function scrapeSingleStock(ticker) {
     
     await browser.close()
     
-    // Merge the data with priority: EarningsWhispers > Multi-source > Yahoo defaults
+    // Merge the data - ALWAYS use Yahoo's date, only use other sources for time/timing
     const mergedData = {
       ...yahooData,
       companyName: yahooData.companyName, // Include company name from Yahoo
-      earningsDate: whisperData.earningsDate || multiSourceTiming?.date || yahooData.earningsDate,
+      // Always use Yahoo Finance date and preserve the date range
+      earningsDate: yahooData.earningsDate,
+      earningsDateRange: yahooData.earningsDateRange,
+      // Only use other sources for time and market timing
       earningsTime: whisperData.earningsTime || multiSourceTiming?.time || null,
       marketTiming: whisperData.marketTiming || multiSourceTiming?.timing || 'after'
     }
@@ -235,23 +242,47 @@ async function scrapeSingleStock(ticker) {
 
       // Update database
       if (mergedData.earningsDate) {
+        // First, check if earnings_date_range column exists
+        const updateData = {
+          company_id: company.id,
+          earnings_date: mergedData.earningsDate,
+          market_timing: mergedData.marketTiming,
+          earnings_time: mergedData.earningsTime,
+          eps_estimate: mergedData.epsEstimate,
+          year_ago_eps: mergedData.yearAgoEPS,
+          last_updated: new Date().toISOString()
+        }
+        
+        // Only add earnings_date_range if it exists
+        if (mergedData.earningsDateRange) {
+          updateData.earnings_date_range = mergedData.earningsDateRange
+        }
+        
+        console.log('   Attempting to save:', JSON.stringify({
+          earnings_date: updateData.earnings_date,
+          earnings_date_range: updateData.earnings_date_range,
+          market_timing: updateData.market_timing
+        }, null, 2))
+        
+        // First try to delete existing record to avoid constraint issues
+        const { error: deleteError } = await supabase
+          .from('earnings_estimates')
+          .delete()
+          .eq('company_id', company.id)
+          .eq('earnings_date', mergedData.earningsDate)
+        
+        if (deleteError && deleteError.code !== 'PGRST116') {
+          console.error('   Error deleting old estimate:', deleteError.message)
+        }
+        
+        // Now insert the new data
         const { error: estimateError } = await supabase
           .from('earnings_estimates')
-          .upsert({
-            company_id: company.id,
-            earnings_date: mergedData.earningsDate,
-            market_timing: mergedData.marketTiming,
-            earnings_time: mergedData.earningsTime,
-            eps_estimate: mergedData.epsEstimate,
-            year_ago_eps: mergedData.yearAgoEPS,
-            last_updated: new Date().toISOString()
-          }, {
-            onConflict: 'company_id,earnings_date',
-            ignoreDuplicates: false
-          })
+          .insert(updateData)
 
         if (estimateError) {
           console.error('   Error saving earnings estimate:', estimateError.message)
+          console.error('   Full error:', JSON.stringify(estimateError, null, 2))
         } else {
           console.log('   ✓ Saved earnings estimate')
         }
