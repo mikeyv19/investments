@@ -1,9 +1,10 @@
 {
-  "name": "earnings-scraper-test",
+  "name": "earnings-scraper",
   "version": "1.0.0",
-  "description": "Minimal deps for testing",
+  "description": "Earnings data scraper with Puppeteer",
   "dependencies": {
     "@supabase/supabase-js": "^2.50.5",
-    "dotenv": "^16.0.3"
+    "dotenv": "^16.0.3",
+    "puppeteer": "^21.11.0"
   }
 }

@@ -183,19 +183,23 @@ export default function EarningsDataGrid({ data }: EarningsDataGridProps) {
         headers: { 'Content-Type': 'application/json' }
       })
       
-      await response.json()
+      const data = await response.json()
       
       if (response.ok) {
-        setRefreshStatus({ [ticker]: 'Success!' })
-        // Reload the page after 2 seconds to show updated data
+        setRefreshStatus({ [ticker]: data.message || 'Initiated!' })
+        // Keep the status message visible for longer since it's running in background
         setTimeout(() => {
-          window.location.reload()
-        }, 2000)
+          setRefreshStatus({ [ticker]: 'Check back in 1-2 min' })
+          // Clear the message after 10 seconds
+          setTimeout(() => {
+            setRefreshStatus({})
+          }, 10000)
+        }, 3000)
       } else {
-        setRefreshStatus({ [ticker]: 'Failed' })
+        setRefreshStatus({ [ticker]: data.error || 'Failed' })
         setTimeout(() => {
           setRefreshStatus({})
-        }, 3000)
+        }, 5000)
       }
     } catch {
       setRefreshStatus({ [ticker]: 'Error' })

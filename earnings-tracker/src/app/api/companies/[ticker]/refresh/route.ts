@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/app/lib/supabase-server'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-import path from 'path'
-
-const execAsync = promisify(exec)
 
 // POST /api/companies/[ticker]/refresh
 export async function POST(
@@ -24,53 +19,86 @@ export async function POST(
       )
     }
 
-    console.log(`Running scraper for ${ticker}...`)
+    // Check if we have a GitHub token
+    const githubToken = process.env.GITHUB_ACTIONS_TOKEN
+    if (!githubToken) {
+      console.error('GITHUB_ACTIONS_TOKEN not configured')
+      return NextResponse.json(
+        { error: 'GitHub Actions not configured. Please set GITHUB_ACTIONS_TOKEN environment variable.' },
+        { status: 500 }
+      )
+    }
 
-    // Run the single stock scraper script
+    console.log(`Triggering GitHub Actions workflow for ${ticker}...`)
+
+    // Trigger GitHub Actions workflow
+    const owner = process.env.GITHUB_OWNER || 'your-github-username' // You'll need to set this
+    const repo = process.env.GITHUB_REPO || 'vassosinvestments' // You'll need to set this
+    
     try {
-      const scriptsDir = path.join(process.cwd(), 'scripts')
-      const command = process.platform === 'win32' 
-        ? `cd /d "${scriptsDir}" && node run-single-stock.js ${ticker}`
-        : `cd "${scriptsDir}" && node run-single-stock.js ${ticker}`
-      
-      const { stdout, stderr } = await execAsync(command, {
-        env: {
-          ...process.env,
-          SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-          SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/actions/workflows/refresh-ticker.yml/dispatches`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/vnd.github+json',
+            'Authorization': `Bearer ${githubToken}`,
+            'X-GitHub-Api-Version': '2022-11-28',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ref: 'main', // or whatever your default branch is
+            inputs: {
+              ticker: ticker.toUpperCase(),
+              triggered_by: user.email || 'unknown'
+            }
+          })
         }
-      })
+      )
 
-      if (stderr && !stderr.includes('Warning') && !stderr.includes('DeprecationWarning')) {
-        console.error('Scraper stderr:', stderr)
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('GitHub API error:', response.status, errorText)
+        
+        if (response.status === 404) {
+          return NextResponse.json(
+            { error: 'GitHub workflow not found. Please ensure the workflow file exists and GITHUB_OWNER/GITHUB_REPO are correct.' },
+            { status: 500 }
+          )
+        } else if (response.status === 401) {
+          return NextResponse.json(
+            { error: 'GitHub authentication failed. Please check your GITHUB_ACTIONS_TOKEN.' },
+            { status: 500 }
+          )
+        }
+        
+        return NextResponse.json(
+          { error: `Failed to trigger workflow: ${errorText}` },
+          { status: 500 }
+        )
       }
 
-      console.log('Scraper output:', stdout)
-
-      // Check if the scraper was successful
-      const success = stdout.includes('Successfully fetched earnings data') || 
-                     stdout.includes('Completed fetching data for')
-
-      if (success) {
+      // GitHub Actions returns 204 No Content on success
+      if (response.status === 204) {
+        // Optionally, you could store a pending status in the database here
+        // to track the refresh progress
+        
         return NextResponse.json({ 
           success: true,
-          message: `Successfully refreshed data for ${ticker}`,
-          output: stdout
+          message: `Refresh initiated for ${ticker}. Data will be updated within 1-2 minutes.`,
+          status: 'pending'
         })
       } else {
         return NextResponse.json(
-          { 
-            error: 'Failed to refresh data',
-            details: stdout
-          },
+          { error: 'Unexpected response from GitHub Actions' },
           { status: 500 }
         )
       }
     } catch (error: unknown) {
-      console.error('Script execution error:', error)
+      console.error('GitHub Actions error:', error)
       return NextResponse.json(
         { 
-          error: 'Failed to run scraper',
+          error: 'Failed to trigger refresh workflow',
           details: error instanceof Error ? error.message : 'Unknown error'
         },
         { status: 500 }
