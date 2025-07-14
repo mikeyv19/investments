@@ -60,6 +60,28 @@ export interface User {
   created_at: string
 }
 
+// User preferences
+export interface UserPreference {
+  id: string
+  user_id: string
+  preference_key: string
+  preference_value: any
+  created_at: string
+  updated_at: string
+}
+
+// Column visibility preferences
+export interface ColumnVisibility {
+  ticker: boolean
+  company_name: boolean
+  earnings_date: boolean
+  earnings_time: boolean
+  market_timing: boolean
+  eps_estimate: boolean
+  year_ago_eps: boolean
+  fiscal_period: boolean
+}
+
 // API response types
 export interface ApiResponse<T> {
   data?: T
@@ -72,7 +94,8 @@ export interface EarningsGridData {
   ticker: string
   company_name: string
   earnings_date: string
-  market_timing: 'before' | 'after'
+  market_timing: 'before' | 'after' | 'during'
+  earnings_time: string | null
   eps_estimate: number | null
   year_ago_eps: number | null
   eps_actual: number | null

@@ -1,11 +1,22 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { EarningsGridData, SortConfig, FilterConfig, GridState } from '@/app/types'
+import { EarningsGridData, SortConfig, FilterConfig, GridState, ColumnVisibility } from '@/app/types'
 
 interface EarningsDataGridProps {
   data: EarningsGridData[]
   onExport?: (format: 'csv' | 'excel') => void
+}
+
+const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
+  ticker: true,
+  company_name: true,
+  earnings_date: true,
+  earnings_time: true,
+  market_timing: true,
+  eps_estimate: true,
+  year_ago_eps: true,
+  fiscal_period: true
 }
 
 export default function EarningsDataGrid({ data, onExport }: EarningsDataGridProps) {
@@ -18,6 +29,67 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
   })
 
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+  const [refreshingTickers, setRefreshingTickers] = useState<Set<string>>(new Set())
+  const [refreshStatus, setRefreshStatus] = useState<Record<string, string>>({})
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>(DEFAULT_COLUMN_VISIBILITY)
+  const [showColumnMenu, setShowColumnMenu] = useState(false)
+
+  // Load column visibility preferences on mount
+  useEffect(() => {
+    loadColumnVisibility()
+  }, [])
+
+  // Handle click outside to close column menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('.column-menu-container')) {
+        setShowColumnMenu(false)
+      }
+    }
+
+    if (showColumnMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showColumnMenu])
+
+  const loadColumnVisibility = async () => {
+    try {
+      const response = await fetch('/api/user/preferences?key=column_visibility')
+      const result = await response.json()
+      
+      if (response.ok && result.data) {
+        setColumnVisibility(result.data)
+      }
+    } catch (error) {
+      console.error('Failed to load column preferences:', error)
+    }
+  }
+
+  const saveColumnVisibility = async (newVisibility: ColumnVisibility) => {
+    try {
+      await fetch('/api/user/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: 'column_visibility',
+          value: newVisibility
+        })
+      })
+    } catch (error) {
+      console.error('Failed to save column preferences:', error)
+    }
+  }
+
+  const toggleColumn = (column: keyof ColumnVisibility) => {
+    const newVisibility = {
+      ...columnVisibility,
+      [column]: !columnVisibility[column]
+    }
+    setColumnVisibility(newVisibility)
+    saveColumnVisibility(newVisibility)
+  }
 
   // Apply global search
   const searchFilteredData = useMemo(() => {
@@ -100,11 +172,55 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
     })
   }
 
+  // Refresh data for a specific ticker
+  const refreshTicker = async (ticker: string) => {
+    if (refreshingTickers.size > 0) return // Only allow one refresh at a time
+    
+    setRefreshingTickers(new Set([ticker]))
+    setRefreshStatus({ [ticker]: 'Refreshing...' })
+    
+    try {
+      const response = await fetch(`/api/companies/${ticker}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        setRefreshStatus({ [ticker]: 'Success!' })
+        // Reload the page after 2 seconds to show updated data
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      } else {
+        setRefreshStatus({ [ticker]: 'Failed' })
+        setTimeout(() => {
+          setRefreshStatus({})
+        }, 3000)
+      }
+    } catch (error) {
+      setRefreshStatus({ [ticker]: 'Error' })
+      setTimeout(() => {
+        setRefreshStatus({})
+      }, 3000)
+    } finally {
+      setRefreshingTickers(new Set())
+    }
+  }
+
   // Export to CSV
   const exportToCSV = () => {
-    const headers = Object.keys(paginatedData[0] || {}).join(',')
+    const visibleColumns = Object.entries(columnVisibility)
+      .filter(([_, visible]) => visible)
+      .map(([column]) => column)
+    
+    const headers = ['ticker', 'company_name', 'earnings_date', 'earnings_time', 'market_timing', 'eps_estimate', 'year_ago_eps', 'fiscal_period']
+      .filter(col => visibleColumns.includes(col))
+      .join(',')
+    
     const rows = paginatedData.map(row => 
-      Object.values(row).map(v => `"${v || ''}"`).join(',')
+      visibleColumns.map(col => `"${row[col as keyof EarningsGridData] || ''}"`).join(',')
     ).join('\n')
     
     const csv = `${headers}\n${rows}`
@@ -116,6 +232,17 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
     a.click()
     URL.revokeObjectURL(url)
   }
+
+  const columnDefinitions = [
+    { key: 'ticker', label: 'Ticker' },
+    { key: 'company_name', label: 'Company' },
+    { key: 'earnings_date', label: 'Date' },
+    { key: 'earnings_time', label: 'Time (ET)' },
+    { key: 'market_timing', label: 'Market' },
+    { key: 'eps_estimate', label: 'EPS Est.' },
+    { key: 'year_ago_eps', label: 'Year Ago EPS' },
+    { key: 'fiscal_period', label: 'Period' }
+  ]
 
   return (
     <div className="w-full">
@@ -129,12 +256,42 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
           className="px-4 py-2 border rounded-lg w-64"
         />
         
-        <button
-          onClick={exportToCSV}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Export CSV
-        </button>
+        <div className="flex gap-2">
+          <div className="relative column-menu-container">
+            <button
+              onClick={() => setShowColumnMenu(!showColumnMenu)}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            >
+              Columns
+            </button>
+            
+            {showColumnMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-10">
+                <div className="p-2">
+                  <div className="text-sm font-semibold text-gray-700 px-2 py-1">Show/Hide Columns</div>
+                  {columnDefinitions.map(col => (
+                    <label key={col.key} className="flex items-center px-2 py-1 hover:bg-gray-100 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={columnVisibility[col.key as keyof ColumnVisibility]}
+                        onChange={() => toggleColumn(col.key as keyof ColumnVisibility)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">{col.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <button
+            onClick={exportToCSV}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Data Grid */}
@@ -142,164 +299,259 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left">
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleSort('ticker')}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
-                  >
-                    Ticker
-                    {gridState.sortBy.find(s => s.field === 'ticker')?.order === 'asc' && '↑'}
-                    {gridState.sortBy.find(s => s.field === 'ticker')?.order === 'desc' && '↓'}
-                  </button>
-                  <input
-                    type="text"
-                    placeholder="Filter..."
-                    value={columnFilters.ticker || ''}
-                    onChange={(e) => setColumnFilters(prev => ({ ...prev, ticker: e.target.value }))}
-                    className="w-full px-2 py-1 text-sm border rounded"
-                  />
-                </div>
-              </th>
-              
-              <th className="px-6 py-3 text-left">
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleSort('company_name')}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
-                  >
-                    Company
-                    {gridState.sortBy.find(s => s.field === 'company_name')?.order === 'asc' && '↑'}
-                    {gridState.sortBy.find(s => s.field === 'company_name')?.order === 'desc' && '↓'}
-                  </button>
-                  <input
-                    type="text"
-                    placeholder="Filter..."
-                    value={columnFilters.company_name || ''}
-                    onChange={(e) => setColumnFilters(prev => ({ ...prev, company_name: e.target.value }))}
-                    className="w-full px-2 py-1 text-sm border rounded"
-                  />
-                </div>
-              </th>
-              
-              <th className="px-6 py-3 text-left">
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleSort('earnings_date')}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
-                  >
-                    Date
-                    {gridState.sortBy.find(s => s.field === 'earnings_date')?.order === 'asc' && '↑'}
-                    {gridState.sortBy.find(s => s.field === 'earnings_date')?.order === 'desc' && '↓'}
-                  </button>
-                  <input
-                    type="date"
-                    value={columnFilters.earnings_date || ''}
-                    onChange={(e) => setColumnFilters(prev => ({ ...prev, earnings_date: e.target.value }))}
-                    className="w-full px-2 py-1 text-sm border rounded"
-                  />
-                </div>
-              </th>
-              
-              <th className="px-6 py-3 text-left">
-                <div className="space-y-2">
-                  <div className="text-xs font-medium text-gray-900 uppercase tracking-wider">
-                    Timing
-                  </div>
-                  <select
-                    value={columnFilters.market_timing || ''}
-                    onChange={(e) => setColumnFilters(prev => ({ ...prev, market_timing: e.target.value }))}
-                    className="w-full px-2 py-1 text-sm border rounded"
-                  >
-                    <option value="">All</option>
-                    <option value="before">Before</option>
-                    <option value="after">After</option>
-                  </select>
-                </div>
-              </th>
-              
-              <th className="px-6 py-3 text-left">
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleSort('eps_estimate')}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
-                  >
-                    EPS Est.
-                    {gridState.sortBy.find(s => s.field === 'eps_estimate')?.order === 'asc' && '↑'}
-                    {gridState.sortBy.find(s => s.field === 'eps_estimate')?.order === 'desc' && '↓'}
-                  </button>
-                </div>
-              </th>
-              
-              <th className="px-6 py-3 text-left">
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleSort('year_ago_eps')}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
-                  >
-                    Year Ago EPS
-                    {gridState.sortBy.find(s => s.field === 'year_ago_eps')?.order === 'asc' && '↑'}
-                    {gridState.sortBy.find(s => s.field === 'year_ago_eps')?.order === 'desc' && '↓'}
-                  </button>
-                </div>
-              </th>
-              
-              <th className="px-6 py-3 text-left">
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleSort('eps_actual')}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
-                  >
-                    EPS Actual
-                    {gridState.sortBy.find(s => s.field === 'eps_actual')?.order === 'asc' && '↑'}
-                    {gridState.sortBy.find(s => s.field === 'eps_actual')?.order === 'desc' && '↓'}
-                  </button>
-                </div>
-              </th>
-              
-              <th className="px-6 py-3 text-left">
+              <th className="px-4 py-3 text-center">
                 <div className="text-xs font-medium text-gray-900 uppercase tracking-wider">
-                  Period
+                  Refresh
                 </div>
               </th>
+              
+              {columnVisibility.ticker && (
+                <th className="px-6 py-3 text-left">
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleSort('ticker')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                    >
+                      Ticker
+                      {gridState.sortBy.find(s => s.field === 'ticker')?.order === 'asc' && '↑'}
+                      {gridState.sortBy.find(s => s.field === 'ticker')?.order === 'desc' && '↓'}
+                    </button>
+                    <input
+                      type="text"
+                      placeholder="Filter..."
+                      value={columnFilters.ticker || ''}
+                      onChange={(e) => setColumnFilters(prev => ({ ...prev, ticker: e.target.value }))}
+                      className="w-full px-2 py-1 text-sm border rounded"
+                    />
+                  </div>
+                </th>
+              )}
+              
+              {columnVisibility.company_name && (
+                <th className="px-6 py-3 text-left">
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleSort('company_name')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                    >
+                      Company
+                      {gridState.sortBy.find(s => s.field === 'company_name')?.order === 'asc' && '↑'}
+                      {gridState.sortBy.find(s => s.field === 'company_name')?.order === 'desc' && '↓'}
+                    </button>
+                    <input
+                      type="text"
+                      placeholder="Filter..."
+                      value={columnFilters.company_name || ''}
+                      onChange={(e) => setColumnFilters(prev => ({ ...prev, company_name: e.target.value }))}
+                      className="w-full px-2 py-1 text-sm border rounded"
+                    />
+                  </div>
+                </th>
+              )}
+              
+              {columnVisibility.earnings_date && (
+                <th className="px-6 py-3 text-left">
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleSort('earnings_date')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                    >
+                      Date
+                      {gridState.sortBy.find(s => s.field === 'earnings_date')?.order === 'asc' && '↑'}
+                      {gridState.sortBy.find(s => s.field === 'earnings_date')?.order === 'desc' && '↓'}
+                    </button>
+                    <input
+                      type="date"
+                      value={columnFilters.earnings_date || ''}
+                      onChange={(e) => setColumnFilters(prev => ({ ...prev, earnings_date: e.target.value }))}
+                      className="w-full px-2 py-1 text-sm border rounded"
+                    />
+                  </div>
+                </th>
+              )}
+              
+              {columnVisibility.earnings_time && (
+                <th className="px-6 py-3 text-left">
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleSort('earnings_time')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                    >
+                      Time (ET)
+                      {gridState.sortBy.find(s => s.field === 'earnings_time')?.order === 'asc' && '↑'}
+                      {gridState.sortBy.find(s => s.field === 'earnings_time')?.order === 'desc' && '↓'}
+                    </button>
+                    <input
+                      type="text"
+                      placeholder="Filter..."
+                      value={columnFilters.earnings_time || ''}
+                      onChange={(e) => setColumnFilters(prev => ({ ...prev, earnings_time: e.target.value }))}
+                      className="w-full px-2 py-1 text-sm border rounded"
+                    />
+                  </div>
+                </th>
+              )}
+              
+              {columnVisibility.market_timing && (
+                <th className="px-6 py-3 text-left">
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleSort('market_timing')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                    >
+                      Market
+                      {gridState.sortBy.find(s => s.field === 'market_timing')?.order === 'asc' && '↑'}
+                      {gridState.sortBy.find(s => s.field === 'market_timing')?.order === 'desc' && '↓'}
+                    </button>
+                    <select
+                      value={columnFilters.market_timing || ''}
+                      onChange={(e) => setColumnFilters(prev => ({ ...prev, market_timing: e.target.value }))}
+                      className="w-full px-2 py-1 text-sm border rounded"
+                    >
+                      <option value="">All</option>
+                      <option value="before">Before</option>
+                      <option value="during">During</option>
+                      <option value="after">After</option>
+                    </select>
+                  </div>
+                </th>
+              )}
+              
+              {columnVisibility.eps_estimate && (
+                <th className="px-6 py-3 text-left">
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleSort('eps_estimate')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                    >
+                      EPS Est.
+                      {gridState.sortBy.find(s => s.field === 'eps_estimate')?.order === 'asc' && '↑'}
+                      {gridState.sortBy.find(s => s.field === 'eps_estimate')?.order === 'desc' && '↓'}
+                    </button>
+                  </div>
+                </th>
+              )}
+              
+              {columnVisibility.year_ago_eps && (
+                <th className="px-6 py-3 text-left">
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleSort('year_ago_eps')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                    >
+                      Year Ago EPS
+                      {gridState.sortBy.find(s => s.field === 'year_ago_eps')?.order === 'asc' && '↑'}
+                      {gridState.sortBy.find(s => s.field === 'year_ago_eps')?.order === 'desc' && '↓'}
+                    </button>
+                  </div>
+                </th>
+              )}
+              
+              {columnVisibility.fiscal_period && (
+                <th className="px-6 py-3 text-left">
+                  <div className="text-xs font-medium text-gray-900 uppercase tracking-wider">
+                    Period
+                  </div>
+                </th>
+              )}
             </tr>
           </thead>
           
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedData.map((row, idx) => (
-              <tr key={idx} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {row.ticker}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {row.company_name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(row.earnings_date + 'T00:00:00').toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                    row.market_timing === 'before' 
-                      ? 'bg-yellow-100 text-yellow-800' 
-                      : 'bg-blue-100 text-blue-800'
-                  }`}>
-                    {row.market_timing}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${row.eps_estimate?.toFixed(2) || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${row.year_ago_eps?.toFixed(2) || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${row.eps_actual?.toFixed(2) || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {row.fiscal_period || 'N/A'}
-                </td>
-              </tr>
-            ))}
+            {paginatedData.map((row, idx) => {
+              const isRefreshing = refreshingTickers.has(row.ticker)
+              const hasRefreshStatus = refreshStatus[row.ticker]
+              
+              return (
+                <tr key={idx} className="hover:bg-gray-50">
+                  <td className="px-4 py-4 text-center">
+                    {hasRefreshStatus ? (
+                      <span className={`text-sm ${
+                        hasRefreshStatus === 'Success!' ? 'text-green-600' : 
+                        hasRefreshStatus === 'Failed' || hasRefreshStatus === 'Error' ? 'text-red-600' : 
+                        'text-blue-600'
+                      }`}>
+                        {hasRefreshStatus}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => refreshTicker(row.ticker)}
+                        disabled={refreshingTickers.size > 0}
+                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isRefreshing ? (
+                          <span className="flex items-center">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            ...
+                          </span>
+                        ) : (
+                          'Refresh'
+                        )}
+                      </button>
+                    )}
+                  </td>
+                  
+                  {columnVisibility.ticker && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {row.ticker}
+                    </td>
+                  )}
+                  
+                  {columnVisibility.company_name && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {row.company_name}
+                    </td>
+                  )}
+                  
+                  {columnVisibility.earnings_date && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(row.earnings_date + 'T00:00:00').toLocaleDateString()}
+                    </td>
+                  )}
+                  
+                  {columnVisibility.earnings_time && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {row.earnings_time || 'N/A'}
+                    </td>
+                  )}
+                  
+                  {columnVisibility.market_timing && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                        row.market_timing === 'before' 
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : row.market_timing === 'during'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {row.market_timing}
+                      </span>
+                    </td>
+                  )}
+                  
+                  {columnVisibility.eps_estimate && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ${row.eps_estimate?.toFixed(2) || 'N/A'}
+                    </td>
+                  )}
+                  
+                  {columnVisibility.year_ago_eps && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ${row.year_ago_eps?.toFixed(2) || 'N/A'}
+                    </td>
+                  )}
+                  
+                  {columnVisibility.fiscal_period && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {row.fiscal_period || 'N/A'}
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

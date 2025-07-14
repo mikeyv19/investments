@@ -134,6 +134,8 @@ async function getHistoricalEPS(cik, ticker) {
 
 // Import Yahoo Finance scraper
 const { scrapeYahooFinance } = require('./scrape-yahoo-finance')
+const { scrapeEarningsWhispers } = require('./scrape-earnings-whispers')
+const { getEarningsTiming } = require('./scrape-earnings-timing')
 
 /**
  * Scrape data for a single stock
@@ -184,24 +186,49 @@ async function scrapeSingleStock(ticker) {
     })
 
     const yahooData = await scrapeYahooFinance(ticker, browser)
+    
+    // Also get EarningsWhispers data
+    console.log('   Checking EarningsWhispers for exact timing...')
+    const whisperData = await scrapeEarningsWhispers(ticker, browser)
+    
+    // If EarningsWhispers didn't get timing, try multiple sources
+    let multiSourceTiming = null
+    if (!whisperData.earningsTime && !whisperData.marketTiming) {
+      console.log('   EarningsWhispers timing not found, trying other sources...')
+      multiSourceTiming = await getEarningsTiming(ticker, browser)
+      if (multiSourceTiming) {
+        console.log(`   ✓ Found timing from ${multiSourceTiming.source}`)
+      }
+    }
+    
     await browser.close()
+    
+    // Merge the data with priority: EarningsWhispers > Multi-source > Yahoo defaults
+    const mergedData = {
+      ...yahooData,
+      earningsDate: whisperData.earningsDate || multiSourceTiming?.date || yahooData.earningsDate,
+      earningsTime: whisperData.earningsTime || multiSourceTiming?.time || null,
+      marketTiming: whisperData.marketTiming || multiSourceTiming?.timing || 'after'
+    }
 
-    if (yahooData.earningsDate || yahooData.epsEstimate || yahooData.yearAgoEPS) {
-      console.log('   ✓ Found Yahoo data:')
-      if (yahooData.earningsDate) console.log(`     Earnings date: ${yahooData.earningsDate}`)
-      if (yahooData.epsEstimate) console.log(`     EPS estimate: $${yahooData.epsEstimate}`)
-      if (yahooData.yearAgoEPS) console.log(`     Year-ago EPS: $${yahooData.yearAgoEPS}`)
+    if (mergedData.earningsDate || mergedData.epsEstimate || mergedData.yearAgoEPS) {
+      console.log('   ✓ Found earnings data:')
+      if (mergedData.earningsDate) console.log(`     Earnings date: ${mergedData.earningsDate}`)
+      if (mergedData.earningsTime) console.log(`     Earnings time: ${mergedData.earningsTime} (${mergedData.marketTiming} market)`)
+      if (mergedData.epsEstimate) console.log(`     EPS estimate: $${mergedData.epsEstimate}`)
+      if (mergedData.yearAgoEPS) console.log(`     Year-ago EPS: $${mergedData.yearAgoEPS}`)
 
       // Update database
-      if (yahooData.earningsDate) {
+      if (mergedData.earningsDate) {
         const { error: estimateError } = await supabase
           .from('earnings_estimates')
           .upsert({
             company_id: company.id,
-            earnings_date: yahooData.earningsDate,
-            market_timing: 'after', // Default
-            eps_estimate: yahooData.epsEstimate,
-            year_ago_eps: yahooData.yearAgoEPS,
+            earnings_date: mergedData.earningsDate,
+            market_timing: mergedData.marketTiming,
+            earnings_time: mergedData.earningsTime,
+            eps_estimate: mergedData.epsEstimate,
+            year_ago_eps: mergedData.yearAgoEPS,
             last_updated: new Date().toISOString()
           }, {
             onConflict: 'company_id,earnings_date',

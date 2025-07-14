@@ -91,7 +91,10 @@ async function checkStockData(ticker) {
   } else {
     console.log(`\n📅 Earnings Estimates (${estimates.length} records):`)
     estimates.forEach(est => {
-      console.log(`  ${est.earnings_date}: $${est.eps_estimate || 'N/A'} (${est.market_timing})`)
+      console.log(`  ${est.earnings_date}: $${est.eps_estimate || 'N/A'} (${est.market_timing}${est.earnings_time ? ' at ' + est.earnings_time : ''})`)
+      if (est.year_ago_eps) {
+        console.log(`    Year-ago EPS: $${est.year_ago_eps}`)
+      }
     })
   }
   

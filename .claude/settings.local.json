@@ -28,7 +28,9 @@
       "Bash(powershell:*)",
       "Bash(npx puppeteer browsers:*)",
       "Bash(del:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(npm run fetch-earnings:*)",
+      "Bash(set DEBUG_SCRAPER=1)"
     ],
     "deny": []
   }

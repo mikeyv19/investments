@@ -130,20 +130,13 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
         throw new Error(data.error || 'Failed to add stock')
       }
       
-      // Show success message while fetching earnings data
-      setError(`Added ${newStockTicker} - Fetching earnings data...`)
-      
       setWatchlistStocks([...watchlistStocks, data.data])
       setNewStockTicker('')
       
-      // Notify parent component to refresh earnings data
-      // Wait a bit for the background fetch to complete
-      setTimeout(() => {
-        if (onStockAdded) {
-          onStockAdded()
-        }
-        setError(null)
-      }, 3000)
+      // Notify parent component to refresh earnings data immediately
+      if (onStockAdded) {
+        onStockAdded()
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to add stock')
     } finally {

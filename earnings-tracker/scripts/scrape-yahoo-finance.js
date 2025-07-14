@@ -10,6 +10,7 @@
 const { createClient } = require('@supabase/supabase-js')
 const puppeteer = require('puppeteer')
 const path = require('path')
+const { scrapeEarningsWhispers } = require('./scrape-earnings-whispers')
 
 // Set Puppeteer cache directory
 process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer')
@@ -308,9 +309,10 @@ async function updateDatabase(scrapedData) {
           .upsert({
             company_id: company.id,
             earnings_date: data.earningsDate,
-            market_timing: 'after', // Default to 'after' when Yahoo doesn't specify
+            market_timing: data.marketTiming || 'after',
+            earnings_time: data.earningsTime,
             eps_estimate: data.epsEstimate,
-            year_ago_eps: data.yearAgoEPS, // Store year-ago EPS
+            year_ago_eps: data.yearAgoEPS,
             last_updated: new Date().toISOString()
           }, {
             onConflict: 'company_id,earnings_date',
@@ -368,8 +370,24 @@ async function scrapeEarningsData() {
     const scrapedData = []
     for (const ticker of tickers) {
       console.log(`Processing ${ticker}...`)
-      const data = await scrapeYahooFinance(ticker, browser)
-      scrapedData.push(data)
+      
+      // First get Yahoo Finance data
+      const yahooData = await scrapeYahooFinance(ticker, browser)
+      
+      // Then get EarningsWhispers data for exact timing
+      const whisperData = await scrapeEarningsWhispers(ticker, browser)
+      
+      // Merge the data, preferring EarningsWhispers for date/time if available
+      const mergedData = {
+        ...yahooData,
+        // Use EarningsWhispers date if available and it has time info
+        earningsDate: (whisperData.earningsDate && whisperData.earningsTime) ? whisperData.earningsDate : yahooData.earningsDate,
+        earningsTime: whisperData.earningsTime,
+        // Use precise market timing from EarningsWhispers if available
+        marketTiming: whisperData.marketTiming || 'after'
+      }
+      
+      scrapedData.push(mergedData)
       
       // Add delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 2000))
