@@ -1,0 +1,70 @@
+name: Refresh Single Ticker Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticker:
+        description: 'Stock ticker to refresh'
+        required: true
+        type: string
+      triggered_by:
+        description: 'User who triggered the refresh'
+        required: false
+        type: string
+        default: 'api'
+
+jobs:
+  refresh-ticker:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'earnings-tracker/scripts/package-lock.json'
+    
+    - name: Install dependencies
+      working-directory: earnings-tracker/scripts
+      run: |
+        npm ci
+        # Install Puppeteer dependencies
+        npx puppeteer browsers install chrome
+    
+    - name: Install Puppeteer system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libnss3 \
+          libatk-bridge2.0-0 \
+          libdrm2 \
+          libxcomposite1 \
+          libxdamage1 \
+          libxfixes3 \
+          libxrandr2 \
+          libgbm1 \
+          libxkbcommon0 \
+          libasound2
+    
+    - name: Run scraper for ${{ github.event.inputs.ticker }}
+      working-directory: earnings-tracker/scripts
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: |
+        echo "Starting refresh for ticker: ${{ github.event.inputs.ticker }}"
+        echo "Triggered by: ${{ github.event.inputs.triggered_by }}"
+        node scrape-single-stock.js ${{ github.event.inputs.ticker }}
+    
+    - name: Report status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ Successfully refreshed data for ${{ github.event.inputs.ticker }}"
+        else
+          echo "❌ Failed to refresh data for ${{ github.event.inputs.ticker }}"
+        fi
