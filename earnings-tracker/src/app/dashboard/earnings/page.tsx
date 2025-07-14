@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import EarningsDataGrid from '@/app/components/EarningsDataGrid'
 import WatchlistManager from '@/app/components/WatchlistManager'
+import RefreshProgressModal from '@/app/components/RefreshProgressModal'
 import { EarningsGridData } from '@/app/types'
 import { createClient } from '@/app/lib/supabase-browser'
 
@@ -14,6 +15,15 @@ export default function EarningsDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [hasWatchlists, setHasWatchlists] = useState(true)
   const [watchlists, setWatchlists] = useState<any[]>([])
+  const [refreshModal, setRefreshModal] = useState({
+    isOpen: false,
+    totalStocks: 0,
+    currentStock: 0,
+    currentTicker: '',
+    isComplete: false,
+    errors: [] as string[]
+  })
+  const cancelRefreshRef = useRef(false)
   const [dateFilter, setDateFilter] = useState(() => {
     // Calculate dates consistently on both server and client
     const today = new Date()
@@ -126,6 +136,101 @@ export default function EarningsDashboard() {
     checkAuthAndWatchlists()
   }
 
+  const refreshAllStocks = async () => {
+    if (!selectedWatchlistId || earningsData.length === 0) return
+
+    // Get unique tickers from earnings data
+    const uniqueTickers = [...new Set(earningsData.map(d => d.ticker))]
+    
+    // Show warning modal
+    const totalSeconds = uniqueTickers.length * 45
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes} minutes`
+    
+    const confirmed = confirm(
+      `This will refresh data for all ${uniqueTickers.length} stocks in this watchlist.\n\n` +
+      `Estimated time: ${timeStr}\n\n` +
+      `Continue?`
+    )
+
+    if (!confirmed) return
+
+    // Reset cancel flag
+    cancelRefreshRef.current = false
+
+    // Initialize modal state
+    setRefreshModal({
+      isOpen: true,
+      totalStocks: uniqueTickers.length,
+      currentStock: 0,
+      currentTicker: '',
+      isComplete: false,
+      errors: []
+    })
+
+    const errors: string[] = []
+
+    // Iterate through each stock with delay
+    for (let i = 0; i < uniqueTickers.length; i++) {
+      // Check if cancelled
+      if (cancelRefreshRef.current) {
+        setRefreshModal(prev => ({
+          ...prev,
+          isComplete: true,
+          errors: [...prev.errors, '⚠️ Refresh cancelled by user']
+        }))
+        break
+      }
+
+      const ticker = uniqueTickers[i]
+
+      // Update modal progress
+      setRefreshModal(prev => ({
+        ...prev,
+        currentStock: i + 1,
+        currentTicker: ticker
+      }))
+
+      try {
+        // Call the refresh endpoint
+        const response = await fetch(`/api/companies/${ticker}/refresh`, {
+          method: 'POST'
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          errors.push(`${ticker}: ${data.error || 'Failed to refresh'}`)
+        }
+      } catch (err) {
+        errors.push(`${ticker}: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      }
+
+      // Wait 45 seconds between requests (except for the last one or if cancelled)
+      if (i < uniqueTickers.length - 1 && !cancelRefreshRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 45000))
+      }
+    }
+
+    // Mark as complete if not already cancelled
+    if (!cancelRefreshRef.current) {
+      setRefreshModal(prev => ({
+        ...prev,
+        isComplete: true,
+        errors
+      }))
+    }
+
+    // Refresh the earnings data if any succeeded
+    if (errors.length < uniqueTickers.length) {
+      await refreshData()
+    }
+  }
+
+  const handleCancelRefresh = () => {
+    cancelRefreshRef.current = true
+  }
+
   const refreshData = async () => {
     console.log('Refreshing earnings data...')
     setLoading(true)
@@ -165,6 +270,7 @@ export default function EarningsDashboard() {
             </div>
             <div className="max-w-md mx-auto">
               <WatchlistManager 
+                selectedWatchlistId={selectedWatchlistId}
                 onWatchlistSelect={handleWatchlistSelect}
                 onStockAdded={handleWatchlistCreated}
               />
@@ -184,6 +290,7 @@ export default function EarningsDashboard() {
           {/* Sidebar with Watchlists */}
           <div className="lg:col-span-1">
             <WatchlistManager 
+              selectedWatchlistId={selectedWatchlistId}
               onWatchlistSelect={handleWatchlistSelect}
               onStockAdded={refreshData}
             />
@@ -228,12 +335,26 @@ export default function EarningsDashboard() {
                   <h2 className="text-xl font-semibold text-foreground">
                     {watchlists.find(w => w.id === selectedWatchlistId)?.name || 'Watchlist'} Earnings
                   </h2>
-                  <button
-                    onClick={refreshData}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                  >
-                    Refresh Data
-                  </button>
+                  <div className="flex gap-2">
+                    {earningsData.length > 0 && (
+                      <button
+                        onClick={refreshAllStocks}
+                        className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors flex items-center gap-2"
+                        title="Refresh all stocks in this watchlist"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh All
+                      </button>
+                    )}
+                    <button
+                      onClick={refreshData}
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                    >
+                      Refresh View
+                    </button>
+                  </div>
                 </div>
                 
                 {error && (
@@ -277,6 +398,18 @@ export default function EarningsDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Refresh Progress Modal */}
+      <RefreshProgressModal
+        isOpen={refreshModal.isOpen}
+        onClose={() => setRefreshModal(prev => ({ ...prev, isOpen: false }))}
+        onCancel={handleCancelRefresh}
+        totalStocks={refreshModal.totalStocks}
+        currentStock={refreshModal.currentStock}
+        currentTicker={refreshModal.currentTicker}
+        isComplete={refreshModal.isComplete}
+        errors={refreshModal.errors}
+      />
     </div>
   )
 }

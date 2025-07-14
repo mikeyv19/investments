@@ -80,7 +80,6 @@ export interface ColumnVisibility {
   market_timing: boolean
   eps_estimate: boolean
   year_ago_eps: boolean
-  fiscal_period: boolean
 }
 
 // API response types

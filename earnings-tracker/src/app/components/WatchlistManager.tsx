@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { UserWatchlist, WatchlistStock } from '@/app/types'
+import BulkImportModal from './BulkImportModal'
 
 interface WatchlistManagerProps {
+  selectedWatchlistId?: string | null
   onWatchlistSelect?: (watchlistId: string | null) => void
   onStockAdded?: () => void
 }
 
-export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: WatchlistManagerProps) {
+export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelect, onStockAdded }: WatchlistManagerProps) {
   const [watchlists, setWatchlists] = useState<UserWatchlist[]>([])
   const [selectedWatchlist, setSelectedWatchlist] = useState<string | null>(null)
   const [watchlistStocks, setWatchlistStocks] = useState<WatchlistStock[]>([])
@@ -20,11 +22,25 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
   const [addingStock, setAddingStock] = useState(false)
   const [editingWatchlistId, setEditingWatchlistId] = useState<string | null>(null)
   const [editingWatchlistName, setEditingWatchlistName] = useState('')
+  const [showBulkImport, setShowBulkImport] = useState(false)
+  const [selectedStocks, setSelectedStocks] = useState<Set<string>>(new Set())
+  const [bulkImportProgress, setBulkImportProgress] = useState<{importing: boolean, current: number, total: number}>({
+    importing: false,
+    current: 0,
+    total: 0
+  })
 
   // Fetch watchlists
   useEffect(() => {
     fetchWatchlists()
   }, [])
+
+  // Set selected watchlist from props
+  useEffect(() => {
+    if (selectedWatchlistId && selectedWatchlist !== selectedWatchlistId) {
+      setSelectedWatchlist(selectedWatchlistId)
+    }
+  }, [selectedWatchlistId])
 
   // Fetch stocks when watchlist changes
   useEffect(() => {
@@ -199,6 +215,74 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
   const handleWatchlistSelect = (id: string) => {
     setSelectedWatchlist(id)
     onWatchlistSelect?.(id)
+    setSelectedStocks(new Set()) // Clear selections when switching watchlists
+  }
+
+  const toggleStockSelection = (ticker: string) => {
+    const newSelected = new Set(selectedStocks)
+    if (newSelected.has(ticker)) {
+      newSelected.delete(ticker)
+    } else {
+      newSelected.add(ticker)
+    }
+    setSelectedStocks(newSelected)
+  }
+
+  const bulkRemoveStocks = async () => {
+    if (selectedStocks.size === 0 || !selectedWatchlist) return
+
+    const confirmed = confirm(`Remove ${selectedStocks.size} selected stock(s) from this watchlist?`)
+    if (!confirmed) return
+
+    for (const ticker of selectedStocks) {
+      await removeStock(ticker)
+    }
+    setSelectedStocks(new Set())
+  }
+
+  const handleBulkImport = async (tickers: string[]) => {
+    if (!selectedWatchlist) return
+
+    setBulkImportProgress({ importing: true, current: 0, total: tickers.length })
+    setError(null)
+    const errors: string[] = []
+
+    for (let i = 0; i < tickers.length; i++) {
+      const ticker = tickers[i]
+      setBulkImportProgress({ importing: true, current: i + 1, total: tickers.length })
+
+      try {
+        const response = await fetch(`/api/watchlists/${selectedWatchlist}/stocks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticker })
+        })
+        
+        if (!response.ok) {
+          const data = await response.json()
+          if (!data.error?.includes('already exists')) {
+            errors.push(`${ticker}: ${data.error || 'Failed to add'}`)
+          }
+        }
+      } catch (err) {
+        errors.push(`${ticker}: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      }
+
+      // Small delay to avoid overwhelming the API
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
+    setBulkImportProgress({ importing: false, current: 0, total: 0 })
+    
+    if (errors.length > 0) {
+      setError(`Failed to import ${errors.length} stocks. ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? '...' : ''}`)
+    } else {
+      // Refresh the watchlist stocks
+      await fetchWatchlistStocks(selectedWatchlist)
+      if (onStockAdded) {
+        onStockAdded()
+      }
+    }
   }
 
   if (loading) {
@@ -232,9 +316,9 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
           <h3 className="text-lg font-semibold text-foreground">My Watchlists</h3>
           <button
             onClick={() => setIsCreating(true)}
-            className="btn-accent text-sm"
+            className="text-xs px-2 py-1 text-primary hover:bg-primary/10 rounded transition-colors"
           >
-            New Watchlist
+            + New
           </button>
         </div>
 
@@ -250,7 +334,7 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
             />
             <button
               onClick={createWatchlist}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+              className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
             >
               Create
             </button>
@@ -259,7 +343,7 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
                 setIsCreating(false)
                 setNewWatchlistName('')
               }}
-              className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+              className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
             >
               Cancel
             </button>
@@ -316,7 +400,7 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
                           e.stopPropagation()
                           renameWatchlist(watchlist.id, editingWatchlistName)
                         }}
-                        className="text-primary hover:text-primary/80 transition-colors font-medium text-sm"
+                        className="text-xs text-primary hover:text-primary/80 transition-colors"
                       >
                         Save
                       </button>
@@ -326,7 +410,7 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
                           setEditingWatchlistId(null)
                           setEditingWatchlistName('')
                         }}
-                        className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
                         Cancel
                       </button>
@@ -373,9 +457,27 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
       {/* Selected Watchlist Stocks */}
       {selectedWatchlist && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-foreground">
-            Stocks in {watchlists.find(w => w.id === selectedWatchlist)?.name}
-          </h3>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-lg font-semibold text-foreground">
+              Stocks in {watchlists.find(w => w.id === selectedWatchlist)?.name}
+            </h3>
+            <div className="flex gap-2">
+              {selectedStocks.size > 0 && (
+                <button
+                  onClick={bulkRemoveStocks}
+                  className="text-sm px-3 py-1 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                >
+                  Remove {selectedStocks.size} Selected
+                </button>
+              )}
+              <button
+                onClick={() => setShowBulkImport(true)}
+                className="text-sm px-3 py-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+              >
+                Bulk Import
+              </button>
+            </div>
+          </div>
 
           <div className="mb-3 flex gap-2">
             <input
@@ -403,26 +505,49 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
             </button>
           </div>
 
+          {bulkImportProgress.importing && (
+            <div className="mb-3 p-3 bg-primary/10 rounded border border-primary/20">
+              <p className="text-sm text-primary">
+                Importing stocks... ({bulkImportProgress.current}/{bulkImportProgress.total})
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
-            {watchlistStocks.map(stock => (
-              <div
-                key={stock.id}
-                className="flex justify-between items-center p-3 bg-muted/50 rounded border border-border"
-              >
-                <div>
-                  <span className="font-semibold">{stock.company?.ticker}</span>
-                  <span className="ml-2 text-muted-foreground">
-                    {stock.company?.company_name}
-                  </span>
-                </div>
-                <button
-                  onClick={() => removeStock(stock.company?.ticker || '')}
-                  className="text-destructive hover:text-destructive/80 transition-colors font-medium"
+            {watchlistStocks.map(stock => {
+              const ticker = stock.company?.ticker || ''
+              const isSelected = selectedStocks.has(ticker)
+              
+              return (
+                <div
+                  key={stock.id}
+                  className={`flex items-center p-3 rounded border transition-colors ${
+                    isSelected
+                      ? 'bg-primary/10 border-primary'
+                      : 'bg-muted/50 border-border hover:bg-muted/70'
+                  }`}
                 >
-                  Remove
-                </button>
-              </div>
-            ))}
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleStockSelection(ticker)}
+                    className="mr-3 h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                  />
+                  <div className="flex-1">
+                    <span className="font-semibold">{ticker}</span>
+                    <span className="ml-2 text-muted-foreground">
+                      {stock.company?.company_name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => removeStock(ticker)}
+                    className="text-xs text-destructive hover:text-destructive/80 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )
+            })}
             
             {watchlistStocks.length === 0 && (
               <p className="text-muted-foreground text-center py-4">
@@ -432,6 +557,13 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
           </div>
         </div>
       )}
+
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onImport={handleBulkImport}
+      />
     </div>
   )
 }

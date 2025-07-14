@@ -15,8 +15,7 @@ const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
   earnings_time: true,
   market_timing: true,
   eps_estimate: true,
-  year_ago_eps: true,
-  fiscal_period: true
+  year_ago_eps: true
 }
 
 export default function EarningsDataGrid({ data, onExport }: EarningsDataGridProps) {
@@ -215,7 +214,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
       .filter(([_, visible]) => visible)
       .map(([column]) => column)
     
-    const headers = ['ticker', 'company_name', 'earnings_date', 'earnings_time', 'market_timing', 'eps_estimate', 'year_ago_eps', 'fiscal_period']
+    const headers = ['ticker', 'company_name', 'earnings_date', 'earnings_time', 'market_timing', 'eps_estimate', 'year_ago_eps']
       .filter(col => visibleColumns.includes(col))
       .join(',')
     
@@ -240,8 +239,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
     { key: 'earnings_time', label: 'Time' },
     { key: 'market_timing', label: 'Timing' },
     { key: 'eps_estimate', label: 'EPS Est' },
-    { key: 'year_ago_eps', label: 'Yr Ago' },
-    { key: 'fiscal_period', label: 'Period' }
+    { key: 'year_ago_eps', label: 'Yr Ago' }
   ]
 
   return (
@@ -448,14 +446,6 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   </div>
                 </th>
               )}
-              
-              {columnVisibility.fiscal_period && (
-                <th className="px-3 py-2 text-left">
-                  <div className="text-xs font-medium text-foreground uppercase tracking-wider">
-                    Period
-                  </div>
-                </th>
-              )}
             </tr>
           </thead>
           
@@ -546,12 +536,6 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   {columnVisibility.year_ago_eps && (
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground">
                       ${row.year_ago_eps?.toFixed(2) || 'N/A'}
-                    </td>
-                  )}
-                  
-                  {columnVisibility.fiscal_period && (
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground">
-                      {row.fiscal_period || 'N/A'}
                     </td>
                   )}
                 </tr>
