@@ -15,6 +15,7 @@ export interface UserWatchlist {
   name: string // e.g., "Tech Stocks", "My Favorites"
   created_at: string
   updated_at: string
+  stock_count?: { count: number }[]
 }
 
 // Watchlist stocks (junction table)

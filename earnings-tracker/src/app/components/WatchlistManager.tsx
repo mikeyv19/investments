@@ -18,6 +18,8 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [addingStock, setAddingStock] = useState(false)
+  const [editingWatchlistId, setEditingWatchlistId] = useState<string | null>(null)
+  const [editingWatchlistName, setEditingWatchlistName] = useState('')
 
   // Fetch watchlists
   useEffect(() => {
@@ -87,8 +89,38 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
     }
   }
 
+  const renameWatchlist = async (id: string, newName: string) => {
+    if (!newName.trim()) return
+
+    try {
+      const response = await fetch(`/api/watchlists/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to rename watchlist')
+      }
+      
+      setWatchlists(watchlists.map(w => w.id === id ? { ...w, name: newName } : w))
+      setEditingWatchlistId(null)
+      setEditingWatchlistName('')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to rename watchlist')
+    }
+  }
+
   const deleteWatchlist = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this watchlist?')) return
+    const watchlist = watchlists.find(w => w.id === id)
+    const stockCount = watchlist?.stock_count?.[0]?.count || 0
+    const message = stockCount > 0 
+      ? `Are you sure you want to delete this watchlist? This will remove ${stockCount} stock(s) from this watchlist only. Stocks will remain in other watchlists.`
+      : 'Are you sure you want to delete this watchlist?'
+    
+    if (!confirm(message)) return
 
     try {
       const response = await fetch(`/api/watchlists/${id}`, {
@@ -170,7 +202,18 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
   }
 
   if (loading) {
-    return <div className="p-4">Loading watchlists...</div>
+    return (
+      <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+        <h2 className="text-2xl font-bold mb-4 text-foreground">Watchlists</h2>
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="animate-pulse">
+              <div className="h-12 bg-muted/50 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -224,32 +267,100 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
         )}
 
         <div className="space-y-2">
-          {watchlists.map(watchlist => (
-            <div
-              key={watchlist.id}
-              className={`flex justify-between items-center p-3 rounded cursor-pointer border transition-all ${
-                selectedWatchlist === watchlist.id
-                  ? 'bg-gradient-to-r from-primary/20 to-secondary/20 border-primary shadow-md shadow-primary/20'
-                  : 'bg-muted/50 hover:bg-accent/50 border-border hover:border-accent'
-              }`}
-            >
-              <span
-                onClick={() => handleWatchlistSelect(watchlist.id)}
-                className="flex-1"
+          {watchlists.map(watchlist => {
+            const stockCount = watchlist.stock_count?.[0]?.count || 0
+            const isEditing = editingWatchlistId === watchlist.id
+            
+            return (
+              <div
+                key={watchlist.id}
+                className={`flex items-center p-3 rounded border transition-all ${
+                  selectedWatchlist === watchlist.id
+                    ? 'bg-gradient-to-r from-primary/20 to-secondary/20 border-primary shadow-md shadow-primary/20'
+                    : 'bg-muted/50 hover:bg-accent/50 border-border hover:border-accent'
+                }`}
               >
-                {watchlist.name}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  deleteWatchlist(watchlist.id)
-                }}
-                className="text-destructive hover:text-destructive/80 transition-colors font-medium"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
+                <div 
+                  className="flex-1 flex items-center gap-2 cursor-pointer"
+                  onClick={() => !isEditing && handleWatchlistSelect(watchlist.id)}
+                >
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editingWatchlistName}
+                      onChange={(e) => setEditingWatchlistName(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          renameWatchlist(watchlist.id, editingWatchlistName)
+                        } else if (e.key === 'Escape') {
+                          setEditingWatchlistId(null)
+                          setEditingWatchlistName('')
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 px-2 py-1 bg-background border border-input rounded text-sm"
+                      autoFocus
+                    />
+                  ) : (
+                    <>
+                      <span className="flex-1">{watchlist.name}</span>
+                      <span className="text-sm text-muted-foreground">({stockCount} stocks)</span>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          renameWatchlist(watchlist.id, editingWatchlistName)
+                        }}
+                        className="text-primary hover:text-primary/80 transition-colors font-medium text-sm"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingWatchlistId(null)
+                          setEditingWatchlistName('')
+                        }}
+                        className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingWatchlistId(watchlist.id)
+                          setEditingWatchlistName(watchlist.name)
+                        }}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        title="Rename watchlist"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteWatchlist(watchlist.id)
+                        }}
+                        className="text-destructive hover:text-destructive/80 transition-colors font-medium text-sm"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })}
           
           {watchlists.length === 0 && (
             <p className="text-muted-foreground text-center py-4">
@@ -279,9 +390,16 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
             <button
               onClick={addStock}
               disabled={addingStock}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center min-w-[44px]"
+              title="Add stock to watchlist"
             >
-              {addingStock ? 'Adding...' : 'Add Stock'}
+              {addingStock ? (
+                <span className="text-sm">...</span>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              )}
             </button>
           </div>
 

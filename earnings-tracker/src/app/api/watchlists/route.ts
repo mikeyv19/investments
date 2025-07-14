@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('user_watchlists')
-      .select('*')
+      .select(`
+        *,
+        stock_count:watchlist_stocks(count)
+      `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
