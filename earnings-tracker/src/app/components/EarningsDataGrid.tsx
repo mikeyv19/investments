@@ -253,24 +253,24 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
           placeholder="Search all columns..."
           value={gridState.globalSearch}
           onChange={(e) => setGridState(prev => ({ ...prev, globalSearch: e.target.value, page: 1 }))}
-          className="px-4 py-2 border rounded-lg w-64"
+          className="input w-64"
         />
         
         <div className="flex gap-2">
           <div className="relative column-menu-container">
             <button
               onClick={() => setShowColumnMenu(!showColumnMenu)}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
             >
               Columns
             </button>
             
             {showColumnMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-10">
+              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border z-10">
                 <div className="p-2">
-                  <div className="text-sm font-semibold text-gray-700 px-2 py-1">Show/Hide Columns</div>
+                  <div className="text-sm font-semibold text-foreground px-2 py-1">Show/Hide Columns</div>
                   {columnDefinitions.map(col => (
-                    <label key={col.key} className="flex items-center px-2 py-1 hover:bg-gray-100 cursor-pointer">
+                    <label key={col.key} className="flex items-center px-2 py-1 hover:bg-accent cursor-pointer">
                       <input
                         type="checkbox"
                         checked={columnVisibility[col.key as keyof ColumnVisibility]}
@@ -287,7 +287,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
           
           <button
             onClick={exportToCSV}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
             Export CSV
           </button>
@@ -295,12 +295,12 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
       </div>
 
       {/* Data Grid */}
-      <div className="overflow-x-auto border rounded-lg">
+      <div className="overflow-x-auto border border-border rounded-lg bg-card">
         <table className="min-w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-muted/30 via-muted/50 to-muted/30">
             <tr>
               <th className="px-4 py-3 text-center">
-                <div className="text-xs font-medium text-gray-900 uppercase tracking-wider">
+                <div className="text-xs font-medium text-foreground uppercase tracking-wider">
                   Refresh
                 </div>
               </th>
@@ -310,7 +310,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('ticker')}
-                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                      className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
                       Ticker
                       {gridState.sortBy.find(s => s.field === 'ticker')?.order === 'asc' && '↑'}
@@ -321,7 +321,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       placeholder="Filter..."
                       value={columnFilters.ticker || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, ticker: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border rounded"
+                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
                     />
                   </div>
                 </th>
@@ -332,7 +332,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('company_name')}
-                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                      className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
                       Company
                       {gridState.sortBy.find(s => s.field === 'company_name')?.order === 'asc' && '↑'}
@@ -343,7 +343,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       placeholder="Filter..."
                       value={columnFilters.company_name || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, company_name: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border rounded"
+                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
                     />
                   </div>
                 </th>
@@ -354,7 +354,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('earnings_date')}
-                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                      className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
                       Date
                       {gridState.sortBy.find(s => s.field === 'earnings_date')?.order === 'asc' && '↑'}
@@ -364,7 +364,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       type="date"
                       value={columnFilters.earnings_date || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, earnings_date: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border rounded"
+                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
                     />
                   </div>
                 </th>
@@ -375,7 +375,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('earnings_time')}
-                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                      className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
                       Time (ET)
                       {gridState.sortBy.find(s => s.field === 'earnings_time')?.order === 'asc' && '↑'}
@@ -386,7 +386,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       placeholder="Filter..."
                       value={columnFilters.earnings_time || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, earnings_time: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border rounded"
+                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
                     />
                   </div>
                 </th>
@@ -397,7 +397,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('market_timing')}
-                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                      className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
                       Market
                       {gridState.sortBy.find(s => s.field === 'market_timing')?.order === 'asc' && '↑'}
@@ -406,7 +406,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                     <select
                       value={columnFilters.market_timing || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, market_timing: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border rounded"
+                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
                     >
                       <option value="">All</option>
                       <option value="before">Before</option>
@@ -422,7 +422,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('eps_estimate')}
-                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                      className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
                       EPS Est.
                       {gridState.sortBy.find(s => s.field === 'eps_estimate')?.order === 'asc' && '↑'}
@@ -437,7 +437,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('year_ago_eps')}
-                      className="flex items-center gap-1 text-xs font-medium text-gray-900 uppercase tracking-wider"
+                      className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
                       Year Ago EPS
                       {gridState.sortBy.find(s => s.field === 'year_ago_eps')?.order === 'asc' && '↑'}
@@ -449,7 +449,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
               
               {columnVisibility.fiscal_period && (
                 <th className="px-6 py-3 text-left">
-                  <div className="text-xs font-medium text-gray-900 uppercase tracking-wider">
+                  <div className="text-xs font-medium text-foreground uppercase tracking-wider">
                     Period
                   </div>
                 </th>
@@ -457,19 +457,19 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
             </tr>
           </thead>
           
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {paginatedData.map((row, idx) => {
               const isRefreshing = refreshingTickers.has(row.ticker)
               const hasRefreshStatus = refreshStatus[row.ticker]
               
               return (
-                <tr key={idx} className="hover:bg-gray-50">
+                <tr key={idx} className="hover:bg-accent/50 transition-colors">
                   <td className="px-4 py-4 text-center">
                     {hasRefreshStatus ? (
-                      <span className={`text-sm ${
-                        hasRefreshStatus === 'Success!' ? 'text-green-600' : 
-                        hasRefreshStatus === 'Failed' || hasRefreshStatus === 'Error' ? 'text-red-600' : 
-                        'text-blue-600'
+                      <span className={`text-sm font-medium ${
+                        hasRefreshStatus === 'Success!' ? 'text-emerald-400' : 
+                        hasRefreshStatus === 'Failed' || hasRefreshStatus === 'Error' ? 'text-rose-400' : 
+                        'text-sky-400'
                       }`}>
                         {hasRefreshStatus}
                       </span>
@@ -477,11 +477,11 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       <button
                         onClick={() => refreshTicker(row.ticker)}
                         disabled={refreshingTickers.size > 0}
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed transition-colors"
                       >
                         {isRefreshing ? (
                           <span className="flex items-center">
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -495,37 +495,37 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   </td>
                   
                   {columnVisibility.ticker && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
                       {row.ticker}
                     </td>
                   )}
                   
                   {columnVisibility.company_name && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {row.company_name}
                     </td>
                   )}
                   
                   {columnVisibility.earnings_date && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {new Date(row.earnings_date + 'T00:00:00').toLocaleDateString()}
                     </td>
                   )}
                   
                   {columnVisibility.earnings_time && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {row.earnings_time || 'N/A'}
                     </td>
                   )}
                   
                   {columnVisibility.market_timing && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                      <span className={`inline-flex px-2 py-1 text-xs rounded-full font-medium ${
                         row.market_timing === 'before' 
-                          ? 'bg-yellow-100 text-yellow-800' 
+                          ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-orange-300 border border-orange-500/30' 
                           : row.market_timing === 'during'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-blue-100 text-blue-800'
+                          ? 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-300 border border-violet-500/30'
                       }`}>
                         {row.market_timing}
                       </span>
@@ -533,19 +533,19 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   )}
                   
                   {columnVisibility.eps_estimate && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       ${row.eps_estimate?.toFixed(2) || 'N/A'}
                     </td>
                   )}
                   
                   {columnVisibility.year_ago_eps && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       ${row.year_ago_eps?.toFixed(2) || 'N/A'}
                     </td>
                   )}
                   
                   {columnVisibility.fiscal_period && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {row.fiscal_period || 'N/A'}
                     </td>
                   )}
@@ -558,7 +558,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
 
       {/* Pagination */}
       <div className="mt-4 flex justify-between items-center">
-        <div className="text-sm text-gray-700">
+        <div className="text-sm text-foreground">
           Showing {((gridState.page - 1) * gridState.pageSize) + 1} to{' '}
           {Math.min(gridState.page * gridState.pageSize, sortedData.length)} of{' '}
           {sortedData.length} results
@@ -568,7 +568,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
           <button
             onClick={() => setGridState(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
             disabled={gridState.page === 1}
-            className="px-3 py-1 border rounded-lg disabled:opacity-50"
+            className="px-3 py-1 border border-border rounded-lg disabled:opacity-50 hover:bg-accent transition-colors"
           >
             Previous
           </button>
@@ -580,7 +580,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
           <button
             onClick={() => setGridState(prev => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))}
             disabled={gridState.page === totalPages}
-            className="px-3 py-1 border rounded-lg disabled:opacity-50"
+            className="px-3 py-1 border border-border rounded-lg disabled:opacity-50 hover:bg-accent transition-colors"
           >
             Next
           </button>

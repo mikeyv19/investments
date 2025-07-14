@@ -174,11 +174,11 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-4">Watchlists</h2>
+    <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+      <h2 className="text-2xl font-bold mb-4 text-foreground">Watchlists</h2>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+        <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded border border-destructive">
           {error}
         </div>
       )}
@@ -186,10 +186,10 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
       {/* Watchlist List */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg font-semibold">My Watchlists</h3>
+          <h3 className="text-lg font-semibold text-foreground">My Watchlists</h3>
           <button
             onClick={() => setIsCreating(true)}
-            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="btn-accent text-sm"
           >
             New Watchlist
           </button>
@@ -202,12 +202,12 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
               value={newWatchlistName}
               onChange={(e) => setNewWatchlistName(e.target.value)}
               placeholder="Watchlist name"
-              className="flex-1 px-3 py-2 border rounded"
+              className="flex-1 input"
               onKeyPress={(e) => e.key === 'Enter' && createWatchlist()}
             />
             <button
               onClick={createWatchlist}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
             >
               Create
             </button>
@@ -216,7 +216,7 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
                 setIsCreating(false)
                 setNewWatchlistName('')
               }}
-              className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
             >
               Cancel
             </button>
@@ -227,10 +227,10 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
           {watchlists.map(watchlist => (
             <div
               key={watchlist.id}
-              className={`flex justify-between items-center p-3 rounded cursor-pointer ${
+              className={`flex justify-between items-center p-3 rounded cursor-pointer border transition-all ${
                 selectedWatchlist === watchlist.id
-                  ? 'bg-blue-100 border-blue-500 border'
-                  : 'bg-gray-50 hover:bg-gray-100'
+                  ? 'bg-gradient-to-r from-primary/20 to-secondary/20 border-primary shadow-md shadow-primary/20'
+                  : 'bg-muted/50 hover:bg-accent/50 border-border hover:border-accent'
               }`}
             >
               <span
@@ -244,7 +244,7 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
                   e.stopPropagation()
                   deleteWatchlist(watchlist.id)
                 }}
-                className="text-red-600 hover:text-red-800"
+                className="text-destructive hover:text-destructive/80 transition-colors font-medium"
               >
                 Delete
               </button>
@@ -252,7 +252,7 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
           ))}
           
           {watchlists.length === 0 && (
-            <p className="text-gray-500 text-center py-4">
+            <p className="text-muted-foreground text-center py-4">
               No watchlists yet. Create one to get started!
             </p>
           )}
@@ -262,7 +262,7 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
       {/* Selected Watchlist Stocks */}
       {selectedWatchlist && (
         <div>
-          <h3 className="text-lg font-semibold mb-3">
+          <h3 className="text-lg font-semibold mb-3 text-foreground">
             Stocks in {watchlists.find(w => w.id === selectedWatchlist)?.name}
           </h3>
 
@@ -272,14 +272,14 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
               value={newStockTicker}
               onChange={(e) => setNewStockTicker(e.target.value.toUpperCase())}
               placeholder="Enter ticker symbol"
-              className="flex-1 px-3 py-2 border rounded"
+              className="flex-1 input"
               onKeyPress={(e) => e.key === 'Enter' && !addingStock && addStock()}
               disabled={addingStock}
             />
             <button
               onClick={addStock}
               disabled={addingStock}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {addingStock ? 'Adding...' : 'Add Stock'}
             </button>
@@ -289,17 +289,17 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
             {watchlistStocks.map(stock => (
               <div
                 key={stock.id}
-                className="flex justify-between items-center p-3 bg-gray-50 rounded"
+                className="flex justify-between items-center p-3 bg-muted/50 rounded border border-border"
               >
                 <div>
                   <span className="font-semibold">{stock.company?.ticker}</span>
-                  <span className="ml-2 text-gray-600">
+                  <span className="ml-2 text-muted-foreground">
                     {stock.company?.company_name}
                   </span>
                 </div>
                 <button
                   onClick={() => removeStock(stock.company?.ticker || '')}
-                  className="text-red-600 hover:text-red-800"
+                  className="text-destructive hover:text-destructive/80 transition-colors font-medium"
                 >
                   Remove
                 </button>
@@ -307,7 +307,7 @@ export default function WatchlistManager({ onWatchlistSelect, onStockAdded }: Wa
             ))}
             
             {watchlistStocks.length === 0 && (
-              <p className="text-gray-500 text-center py-4">
+              <p className="text-muted-foreground text-center py-4">
                 No stocks in this watchlist yet.
               </p>
             )}

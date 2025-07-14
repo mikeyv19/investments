@@ -77,9 +77,9 @@ export default function EarningsDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Earnings Tracker</h1>
+        <h1 className="text-3xl font-bold mb-6 text-foreground">Earnings Tracker</h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar with Watchlists */}
@@ -90,31 +90,31 @@ export default function EarningsDashboard() {
             />
             
             {/* Date Filters */}
-            <div className="bg-white rounded-lg shadow p-6 mt-6">
-              <h3 className="text-lg font-semibold mb-4">Date Range</h3>
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6 mt-6">
+              <h3 className="text-lg font-semibold mb-4 text-foreground">Date Range</h3>
               
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Start Date
                   </label>
                   <input
                     type="date"
                     value={dateFilter.startDate}
                     onChange={(e) => setDateFilter(prev => ({ ...prev, startDate: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded"
+                    className="w-full input"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     End Date
                   </label>
                   <input
                     type="date"
                     value={dateFilter.endDate}
                     onChange={(e) => setDateFilter(prev => ({ ...prev, endDate: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded"
+                    className="w-full input"
                   />
                 </div>
               </div>
@@ -123,21 +123,21 @@ export default function EarningsDashboard() {
           
           {/* Main Content Area */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">
+                <h2 className="text-xl font-semibold text-foreground">
                   {selectedWatchlistId ? 'Watchlist Earnings' : 'All Earnings'}
                 </h2>
                 <button
                   onClick={refreshData}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
                 >
                   Refresh Data
                 </button>
               </div>
               
               {error && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded border border-destructive">
                   {error}
                 </div>
               )}

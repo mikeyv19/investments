@@ -27,21 +27,21 @@ export default function LoginForm() {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h2 className="text-2xl font-bold mb-6 text-center">Sign In</h2>
+      <form onSubmit={handleSubmit} className="bg-card shadow-md rounded-lg px-8 pt-6 pb-8 mb-4 border border-border">
+        <h2 className="text-2xl font-bold mb-6 text-center text-foreground">Sign In</h2>
         
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
 
         <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+          <label className="block text-foreground text-sm font-bold mb-2" htmlFor="email">
             Email
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="input w-full"
             id="email"
             type="email"
             placeholder="Email"
@@ -52,11 +52,11 @@ export default function LoginForm() {
         </div>
 
         <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+          <label className="block text-foreground text-sm font-bold mb-2" htmlFor="password">
             Password
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+            className="input w-full mb-3"
             id="password"
             type="password"
             placeholder="Password"
@@ -68,7 +68,7 @@ export default function LoginForm() {
 
         <div className="flex items-center justify-between">
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+            className="btn-primary disabled:opacity-50"
             type="submit"
             disabled={loading}
           >
@@ -76,15 +76,15 @@ export default function LoginForm() {
           </button>
           <Link
             href="/reset-password"
-            className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
+            className="inline-block align-baseline font-bold text-sm text-primary hover:text-primary/80 transition-colors"
           >
             Forgot Password?
           </Link>
         </div>
 
         <div className="text-center mt-4">
-          <span className="text-gray-600 text-sm">Don't have an account? </span>
-          <Link href="/signup" className="font-bold text-sm text-blue-500 hover:text-blue-800">
+          <span className="text-muted-foreground text-sm">Don't have an account? </span>
+          <Link href="/signup" className="font-bold text-sm text-primary hover:text-primary/80 transition-colors">
             Sign Up
           </Link>
         </div>
