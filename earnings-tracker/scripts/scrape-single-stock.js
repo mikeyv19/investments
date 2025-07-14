@@ -206,9 +206,24 @@ async function scrapeSingleStock(ticker) {
     // Merge the data with priority: EarningsWhispers > Multi-source > Yahoo defaults
     const mergedData = {
       ...yahooData,
+      companyName: yahooData.companyName, // Include company name from Yahoo
       earningsDate: whisperData.earningsDate || multiSourceTiming?.date || yahooData.earningsDate,
       earningsTime: whisperData.earningsTime || multiSourceTiming?.time || null,
       marketTiming: whisperData.marketTiming || multiSourceTiming?.timing || 'after'
+    }
+
+    // Update company name if we found one
+    if (mergedData.companyName && (!company.company_name || company.company_name !== mergedData.companyName)) {
+      const { error: updateError } = await supabase
+        .from('companies')
+        .update({ company_name: mergedData.companyName })
+        .eq('id', company.id)
+
+      if (updateError) {
+        console.error('   Error updating company name:', updateError.message)
+      } else {
+        console.log(`   ✓ Updated company name to: ${mergedData.companyName}`)
+      }
     }
 
     if (mergedData.earningsDate || mergedData.epsEstimate || mergedData.yearAgoEPS) {

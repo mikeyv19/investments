@@ -33,6 +33,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 async function scrapeYahooFinance(ticker, browser) {
   const result = {
     ticker,
+    companyName: null,
     earningsDate: null,
     epsEstimate: null,
     yearAgoEPS: null,
@@ -49,6 +50,33 @@ async function scrapeYahooFinance(ticker, browser) {
 
     // Wait for the page to load
     await quotePage.waitForSelector('fin-streamer, [data-field], .yf-1jj98ts', { timeout: 10000 }).catch(() => {})
+
+    // Extract company name
+    const companyName = await quotePage.evaluate(() => {
+      // Try to find the h1 tag with company name
+      const h1 = document.querySelector('h1.yf-4vbjci')
+      if (h1) {
+        // Extract just the company name without the ticker in parentheses
+        const fullText = h1.textContent.trim()
+        const match = fullText.match(/^(.+?)\s*\([^)]+\)$/)
+        return match ? match[1].trim() : fullText
+      }
+      
+      // Fallback: look for any h1 tag in the header
+      const anyH1 = document.querySelector('section[data-testid="quote-hdr"] h1')
+      if (anyH1) {
+        const fullText = anyH1.textContent.trim()
+        const match = fullText.match(/^(.+?)\s*\([^)]+\)$/)
+        return match ? match[1].trim() : fullText
+      }
+      
+      return null
+    })
+
+    if (companyName) {
+      result.companyName = companyName
+      console.log(`  Found company name: ${companyName}`)
+    }
 
     // Try to find earnings date
     const earningsDateText = await quotePage.evaluate(() => {
@@ -290,16 +318,30 @@ async function updateDatabase(scrapedData) {
     }
 
     try {
-      // Get company ID
+      // Get company ID and update company name if found
       const { data: company } = await supabase
         .from('companies')
-        .select('id')
+        .select('id, company_name')
         .eq('ticker', data.ticker)
         .single()
 
       if (!company) {
         console.log(`  Company ${data.ticker} not found in database`)
         continue
+      }
+
+      // Update company name if we found one and it's different or missing
+      if (data.companyName && (!company.company_name || company.company_name !== data.companyName)) {
+        const { error: updateError } = await supabase
+          .from('companies')
+          .update({ company_name: data.companyName })
+          .eq('id', company.id)
+
+        if (updateError) {
+          console.error(`  Error updating company name for ${data.ticker}:`, updateError)
+        } else {
+          console.log(`  Updated company name for ${data.ticker} to: ${data.companyName}`)
+        }
       }
 
       // Update or insert earnings estimate
