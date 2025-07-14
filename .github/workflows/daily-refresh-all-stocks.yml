@@ -1,0 +1,79 @@
+name: Daily Refresh All Stocks
+
+on:
+  schedule:
+    # Run at 2:00 AM EST every day (7:00 AM UTC)
+    - cron: '0 7 * * *'
+  workflow_dispatch:  # Allow manual trigger for testing
+
+jobs:
+  refresh-all-stocks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hours max (for many stocks)
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'earnings-tracker/scripts/package-lock.json'
+    
+    - name: Install Chrome dependencies
+      run: |
+        sudo apt-get update
+        # Install Google Chrome Stable
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        # Install additional dependencies
+        sudo apt-get install -y \
+          fonts-liberation \
+          libu2f-udev \
+          libvulkan1 \
+          xdg-utils
+        echo "Chrome version:"
+        google-chrome --version
+    
+    - name: Install dependencies
+      working-directory: earnings-tracker/scripts
+      env:
+        PUPPETEER_SKIP_DOWNLOAD: true
+      run: |
+        echo "Installing npm dependencies..."
+        npm install
+        echo "Dependencies installed successfully"
+    
+    - name: Run daily stock refresh
+      working-directory: earnings-tracker/scripts
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        PUPPETEER_SKIP_DOWNLOAD: true
+        PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        CI: true
+      run: |
+        echo "Starting daily refresh of all stocks..."
+        echo "Current time: $(date)"
+        node refresh-all-stocks-optimized.js
+    
+    - name: Upload logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: refresh-logs-${{ github.run_number }}
+        path: earnings-tracker/scripts/refresh-logs-*.txt
+        retention-days: 7
+    
+    - name: Report status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ Daily stock refresh completed successfully"
+        else
+          echo "❌ Daily stock refresh failed"
+        fi

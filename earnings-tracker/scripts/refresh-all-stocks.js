@@ -1,15 +1,20 @@
 /**
- * Refresh All Watchlist Stocks
+ * Refresh All Stocks in Database
  * 
- * This script runs daily via GitHub Actions to refresh all stocks
- * that are in at least one user watchlist.
+ * This script runs daily via GitHub Actions to refresh ALL stocks
+ * in the companies table, regardless of watchlist status.
  * 
- * It respects rate limits with 1 second delay between stocks.
+ * It respects rate limits with 5 second delay between stocks.
  */
 
 const { createClient } = require('@supabase/supabase-js')
 const fs = require('fs').promises
 const path = require('path')
+const puppeteer = require('puppeteer')
+const { getPuppeteerOptions } = require('./chrome-finder')
+const { scrapeYahooFinance } = require('./scrape-yahoo-finance')
+const { scrapeEarningsWhispers } = require('./scrape-earnings-whispers')
+const { getEarningsTiming } = require('./scrape-earnings-timing')
 
 // Environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -23,8 +28,8 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 // Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-// Rate limit delay (1 second between stocks)
-const RATE_LIMIT_DELAY = 1000
+// Rate limit delay (5 seconds between stocks to avoid rate limiting)
+const RATE_LIMIT_DELAY = 5000
 
 // Create log file
 const logFile = path.join(__dirname, `refresh-logs-${new Date().toISOString().split('T')[0]}.txt`)
@@ -37,40 +42,23 @@ async function log(message) {
 }
 
 /**
- * Get all unique tickers from watchlists
+ * Get all tickers from the companies table
  */
-async function getWatchlistTickers() {
+async function getAllTickers() {
   try {
-    const { data: watchlistStocks, error } = await supabase
-      .from('watchlist_stocks')
-      .select(`
-        company:companies(
-          id,
-          ticker,
-          company_name
-        )
-      `)
+    const { data: companies, error } = await supabase
+      .from('companies')
+      .select('id, ticker, company_name')
+      .order('ticker', { ascending: true })
     
     if (error) {
-      await log(`Error fetching watchlist stocks: ${error.message}`)
+      await log(`Error fetching companies: ${error.message}`)
       return []
     }
     
-    // Create unique ticker map
-    const tickerMap = new Map()
-    watchlistStocks.forEach(item => {
-      if (item.company) {
-        tickerMap.set(item.company.ticker, {
-          id: item.company.id,
-          ticker: item.company.ticker,
-          company_name: item.company.company_name
-        })
-      }
-    })
-    
-    return Array.from(tickerMap.values())
+    return companies || []
   } catch (error) {
-    await log(`Error in getWatchlistTickers: ${error.message}`)
+    await log(`Error in getAllTickers: ${error.message}`)
     return []
   }
 }
@@ -120,12 +108,12 @@ async function refreshAllStocks() {
   await log('===== Starting Daily Stock Refresh =====')
   
   try {
-    // Get all unique tickers from watchlists
-    await log('Fetching all watchlist tickers...')
-    const tickers = await getWatchlistTickers()
+    // Get all tickers from the database
+    await log('Fetching all tickers from database...')
+    const tickers = await getAllTickers()
     
     if (tickers.length === 0) {
-      await log('No tickers found in any watchlists')
+      await log('No tickers found in database')
       return
     }
     
