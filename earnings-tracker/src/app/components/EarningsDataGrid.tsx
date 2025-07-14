@@ -237,10 +237,10 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
     { key: 'ticker', label: 'Ticker' },
     { key: 'company_name', label: 'Company' },
     { key: 'earnings_date', label: 'Date' },
-    { key: 'earnings_time', label: 'Time (ET)' },
-    { key: 'market_timing', label: 'Market' },
-    { key: 'eps_estimate', label: 'EPS Est.' },
-    { key: 'year_ago_eps', label: 'Year Ago EPS' },
+    { key: 'earnings_time', label: 'Time' },
+    { key: 'market_timing', label: 'Timing' },
+    { key: 'eps_estimate', label: 'EPS Est' },
+    { key: 'year_ago_eps', label: 'Yr Ago' },
     { key: 'fiscal_period', label: 'Period' }
   ]
 
@@ -299,14 +299,16 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
         <table className="min-w-full">
           <thead className="bg-gradient-to-r from-muted/30 via-muted/50 to-muted/30">
             <tr>
-              <th className="px-4 py-3 text-center">
-                <div className="text-xs font-medium text-foreground uppercase tracking-wider">
-                  Refresh
+              <th className="px-2 py-3 text-center">
+                <div className="text-xs font-medium text-foreground" title="Refresh">
+                  <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                 </div>
               </th>
               
               {columnVisibility.ticker && (
-                <th className="px-6 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('ticker')}
@@ -321,14 +323,14 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       placeholder="Filter..."
                       value={columnFilters.ticker || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, ticker: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
+                      className="w-full px-1 py-0.5 text-xs border border-input rounded bg-background text-foreground"
                     />
                   </div>
                 </th>
               )}
               
               {columnVisibility.company_name && (
-                <th className="px-6 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('company_name')}
@@ -343,14 +345,14 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       placeholder="Filter..."
                       value={columnFilters.company_name || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, company_name: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
+                      className="w-full px-1 py-0.5 text-xs border border-input rounded bg-background text-foreground"
                     />
                   </div>
                 </th>
               )}
               
               {columnVisibility.earnings_date && (
-                <th className="px-6 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('earnings_date')}
@@ -364,20 +366,20 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       type="date"
                       value={columnFilters.earnings_date || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, earnings_date: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
+                      className="w-full px-1 py-0.5 text-xs border border-input rounded bg-background text-foreground"
                     />
                   </div>
                 </th>
               )}
               
               {columnVisibility.earnings_time && (
-                <th className="px-6 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('earnings_time')}
                       className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
-                      Time (ET)
+                      Time
                       {gridState.sortBy.find(s => s.field === 'earnings_time')?.order === 'asc' && '↑'}
                       {gridState.sortBy.find(s => s.field === 'earnings_time')?.order === 'desc' && '↓'}
                     </button>
@@ -386,27 +388,27 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       placeholder="Filter..."
                       value={columnFilters.earnings_time || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, earnings_time: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
+                      className="w-full px-1 py-0.5 text-xs border border-input rounded bg-background text-foreground"
                     />
                   </div>
                 </th>
               )}
               
               {columnVisibility.market_timing && (
-                <th className="px-6 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('market_timing')}
                       className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
-                      Market
+                      Timing
                       {gridState.sortBy.find(s => s.field === 'market_timing')?.order === 'asc' && '↑'}
                       {gridState.sortBy.find(s => s.field === 'market_timing')?.order === 'desc' && '↓'}
                     </button>
                     <select
                       value={columnFilters.market_timing || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, market_timing: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border border-input rounded bg-background text-foreground"
+                      className="w-full px-1 py-0.5 text-xs border border-input rounded bg-background text-foreground"
                     >
                       <option value="">All</option>
                       <option value="before">Before</option>
@@ -418,7 +420,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
               )}
               
               {columnVisibility.eps_estimate && (
-                <th className="px-6 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('eps_estimate')}
@@ -433,13 +435,13 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
               )}
               
               {columnVisibility.year_ago_eps && (
-                <th className="px-6 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <div className="space-y-2">
                     <button
                       onClick={() => handleSort('year_ago_eps')}
                       className="flex items-center gap-1 text-xs font-medium text-foreground uppercase tracking-wider"
                     >
-                      Year Ago EPS
+                      Yr Ago
                       {gridState.sortBy.find(s => s.field === 'year_ago_eps')?.order === 'asc' && '↑'}
                       {gridState.sortBy.find(s => s.field === 'year_ago_eps')?.order === 'desc' && '↓'}
                     </button>
@@ -448,7 +450,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
               )}
               
               {columnVisibility.fiscal_period && (
-                <th className="px-6 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <div className="text-xs font-medium text-foreground uppercase tracking-wider">
                     Period
                   </div>
@@ -464,7 +466,7 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
               
               return (
                 <tr key={idx} className="hover:bg-accent/50 transition-colors">
-                  <td className="px-4 py-4 text-center">
+                  <td className="px-2 py-3 text-center">
                     {hasRefreshStatus ? (
                       <span className={`text-sm font-medium ${
                         hasRefreshStatus === 'Success!' ? 'text-emerald-400' : 
@@ -477,7 +479,8 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                       <button
                         onClick={() => refreshTicker(row.ticker)}
                         disabled={refreshingTickers.size > 0}
-                        className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed transition-colors"
+                        className="p-1 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed transition-colors"
+                        title="Refresh data"
                       >
                         {isRefreshing ? (
                           <span className="flex items-center">
@@ -488,38 +491,40 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                             ...
                           </span>
                         ) : (
-                          'Refresh'
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
                         )}
                       </button>
                     )}
                   </td>
                   
                   {columnVisibility.ticker && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
+                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-foreground">
                       {row.ticker}
                     </td>
                   )}
                   
                   {columnVisibility.company_name && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground">
                       {row.company_name}
                     </td>
                   )}
                   
                   {columnVisibility.earnings_date && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                      {new Date(row.earnings_date + 'T00:00:00').toLocaleDateString()}
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-muted-foreground">
+                      {new Date(row.earnings_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </td>
                   )}
                   
                   {columnVisibility.earnings_time && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground">
                       {row.earnings_time || 'N/A'}
                     </td>
                   )}
                   
                   {columnVisibility.market_timing && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-3 py-2 whitespace-nowrap text-sm">
                       <span className={`inline-flex px-2 py-1 text-xs rounded-full font-medium ${
                         row.market_timing === 'before' 
                           ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-orange-300 border border-orange-500/30' 
@@ -533,19 +538,19 @@ export default function EarningsDataGrid({ data, onExport }: EarningsDataGridPro
                   )}
                   
                   {columnVisibility.eps_estimate && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground">
                       ${row.eps_estimate?.toFixed(2) || 'N/A'}
                     </td>
                   )}
                   
                   {columnVisibility.year_ago_eps && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground">
                       ${row.year_ago_eps?.toFixed(2) || 'N/A'}
                     </td>
                   )}
                   
                   {columnVisibility.fiscal_period && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-muted-foreground">
                       {row.fiscal_period || 'N/A'}
                     </td>
                   )}
