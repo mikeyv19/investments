@@ -59,13 +59,13 @@ To find these:
 ### Required Variables:
 - **GITHUB_ACTIONS_TOKEN**: The personal access token from Step 2
 - **GITHUB_OWNER**: Your GitHub username
-- **GITHUB_REPO**: Your repository name (e.g., "vassosinvestments")
+- **GITHUB_REPO**: Your repository name (e.g., "investments")
 
 ### Example values:
 ```
 GITHUB_ACTIONS_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 GITHUB_OWNER=yourusername
-GITHUB_REPO=vassosinvestments
+GITHUB_REPO=investments
 ```
 
 ## Step 5: Redeploy on Vercel

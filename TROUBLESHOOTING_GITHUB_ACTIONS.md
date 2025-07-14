@@ -16,12 +16,12 @@ Go to your Vercel project → Settings → Environment Variables and ensure thes
 ```
 GITHUB_ACTIONS_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 GITHUB_OWNER=mikeyv19
-GITHUB_REPO=VassosInvestments
+GITHUB_REPO=investments
 ```
 
 **Important**: Based on your Git remote, it looks like:
 - Your GitHub username is: `mikeyv19`
-- Your repository name is: `VassosInvestments` (with capital V and I)
+- Your repository name is: `investments`
 
 ## 2. After Adding Variables, Redeploy
 
@@ -33,7 +33,7 @@ You MUST redeploy after adding environment variables:
 ## 3. Test GitHub Actions Manually First
 
 Before testing from the app, verify the workflow exists:
-1. Go to: https://github.com/mikeyv19/VassosInvestments/actions
+1. Go to: https://github.com/mikeyv19/investments/actions
 2. You should see "Refresh Single Ticker Data" in the workflows list
 3. Click on it and try "Run workflow" manually
 
@@ -60,14 +60,14 @@ If it still doesn't work:
 
 ### Case Sensitivity Issue
 GitHub is case-sensitive. Make sure:
-- `GITHUB_REPO=VassosInvestments` (not "vassosinvestments")
+- `GITHUB_REPO=investments`
 
 ## Quick Debug Checklist
 
 - [ ] Workflow file exists at `.github/workflows/refresh-ticker.yml` in GitHub
 - [ ] GITHUB_ACTIONS_TOKEN is set in Vercel (starts with ghp_)
 - [ ] GITHUB_OWNER is set to `mikeyv19`
-- [ ] GITHUB_REPO is set to `VassosInvestments` (check capitalization!)
+- [ ] GITHUB_REPO is set to `investments`
 - [ ] Redeployed on Vercel after adding variables
 - [ ] Token has `repo` and `workflow` permissions
 
@@ -75,10 +75,10 @@ GitHub is case-sensitive. Make sure:
 
 The API will try to call:
 ```
-https://api.github.com/repos/mikeyv19/VassosInvestments/actions/workflows/refresh-ticker.yml/dispatches
+https://api.github.com/repos/mikeyv19/investments/actions/workflows/refresh-ticker.yml/dispatches
 ```
 
 You can test this URL exists by visiting (when logged into GitHub):
 ```
-https://github.com/mikeyv19/VassosInvestments/actions/workflows/refresh-ticker.yml
+https://github.com/mikeyv19/investments/actions/workflows/refresh-ticker.yml
 ```
