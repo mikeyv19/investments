@@ -176,7 +176,7 @@ SUPABASE_SERVICE_ROLE_KEY
 
 **IMPORTANT**: Update the User-Agent in `/src/app/lib/sec-edgar.ts` with your contact information:
 ```typescript
-const USER_AGENT = 'Personal Earnings Tracker (your-email@example.com)'
+const USER_AGENT = process.env.CONTACT_EMAIL || 'contact@example.com'
 ```
 
 Rate limiting is built-in: max 10 requests/second as per SEC requirements.

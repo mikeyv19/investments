@@ -24,7 +24,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 // SEC EDGAR configuration
 const SEC_API_BASE = 'https://data.sec.gov'
-const USER_AGENT = 'mattmass123@gmail.com'
+const USER_AGENT = process.env.CONTACT_EMAIL || 'contact@example.com'
 const RATE_LIMIT_MS = 100
 
 let lastRequestTime = 0

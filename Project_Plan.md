@@ -238,5 +238,5 @@ jobs:
 
 ---
 
-**Contact**: mattmass123@gmail.com (configured in SEC API)
+**Contact**: Configured via CONTACT_EMAIL environment variable
 **Priority**: Personal project, focus on reliability over features

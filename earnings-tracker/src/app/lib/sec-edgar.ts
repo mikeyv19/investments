@@ -13,7 +13,7 @@ const SEC_API_BASE = "https://data.sec.gov";
 // const SEC_ARCHIVES_BASE = "https://www.sec.gov/Archives";
 
 // IMPORTANT: Update this with your contact information
-const USER_AGENT = "mattmass123@gmail.com";
+const USER_AGENT = process.env.CONTACT_EMAIL || "contact@example.com";
 
 // Rate limiting: max 10 requests per second
 const RATE_LIMIT_MS = 100; // 100ms between requests = 10 req/sec max
