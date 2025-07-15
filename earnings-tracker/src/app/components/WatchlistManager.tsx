@@ -207,6 +207,11 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
       }
       
       setWatchlistStocks(watchlistStocks.filter(s => s.company?.ticker !== ticker))
+      
+      // Notify parent component to refresh earnings data
+      if (onStockAdded) {
+        onStockAdded()
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to remove stock')
     }
@@ -238,6 +243,8 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
       await removeStock(ticker)
     }
     setSelectedStocks(new Set())
+    
+    // Note: removeStock already calls onStockAdded, so the refresh will happen automatically
   }
 
   const handleBulkImport = async (tickers: string[]) => {
