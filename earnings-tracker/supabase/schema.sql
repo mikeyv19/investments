@@ -4,6 +4,19 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- User profiles table
+CREATE TABLE user_profiles (
+    id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    display_name TEXT,
+    theme_preference TEXT DEFAULT 'system' CHECK (theme_preference IN ('light', 'dark', 'system')),
+    notification_preferences JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- Index for user profiles
+CREATE INDEX idx_user_profiles_id ON user_profiles(id);
+
 -- Companies table
 CREATE TABLE companies (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -80,11 +93,25 @@ CREATE INDEX idx_earnings_estimates_last_updated ON earnings_estimates(last_upda
 -- Row Level Security (RLS) Policies
 
 -- Enable RLS on all tables
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_watchlists ENABLE ROW LEVEL SECURITY;
 ALTER TABLE watchlist_stocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE historical_eps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE earnings_estimates ENABLE ROW LEVEL SECURITY;
+
+-- User profiles: Users can only see/modify their own
+CREATE POLICY "Users can view their own profile"
+    ON user_profiles FOR SELECT
+    USING (auth.uid() = id);
+
+CREATE POLICY "Users can create their own profile"
+    ON user_profiles FOR INSERT
+    WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile"
+    ON user_profiles FOR UPDATE
+    USING (auth.uid() = id);
 
 -- Companies: Everyone can read
 CREATE POLICY "Companies are viewable by everyone"
@@ -165,6 +192,11 @@ CREATE TRIGGER update_user_watchlists_updated_at BEFORE UPDATE
     ON user_watchlists FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Trigger for updating updated_at on user_profiles
+CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE
+    ON user_profiles FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- Function to get earnings data with company info
 CREATE OR REPLACE FUNCTION get_earnings_grid_data(
     p_user_id UUID DEFAULT NULL,
@@ -217,3 +249,20 @@ BEGIN
     ORDER BY ee.earnings_date, c.ticker;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to handle new user signup (creates a profile automatically)
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.user_profiles (id)
+    VALUES (NEW.id)
+    ON CONFLICT (id) DO NOTHING;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to create profile on user signup
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_new_user();
