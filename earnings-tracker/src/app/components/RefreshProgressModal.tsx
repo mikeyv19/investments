@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { Modal } from '@/app/components/ui/modal'
 
 interface RefreshProgressModalProps {
   isOpen: boolean
@@ -62,16 +63,16 @@ export default function RefreshProgressModal({
     }
   }, [isOpen, canClose, onClose])
 
-  if (!isOpen) return null
-
   const progressPercentage = totalStocks > 0 ? (currentStock / totalStocks) * 100 : 0
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-card rounded-lg shadow-xl border border-border max-w-md w-full p-6">
-        <h2 className="text-xl font-bold mb-4 text-foreground">
-          {isComplete ? 'Refresh Complete' : 'Refreshing Watchlist Data'}
-        </h2>
+    <Modal
+      isOpen={isOpen}
+      onClose={canClose ? onClose : () => {}}
+      title={isComplete ? 'Refresh Complete' : 'Refreshing Watchlist Data'}
+      size="md"
+    >
+      <div className="p-6">
         
         {!isComplete && (
           <>
@@ -147,6 +148,6 @@ export default function RefreshProgressModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

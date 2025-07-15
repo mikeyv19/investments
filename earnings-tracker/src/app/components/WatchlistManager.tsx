@@ -3,6 +3,11 @@
 import { useState, useEffect } from 'react'
 import { UserWatchlist, WatchlistStock } from '@/app/types'
 import BulkImportModal from './BulkImportModal'
+import { useConfirmation } from '@/app/components/ui/confirmation-dialog'
+import toast from 'react-hot-toast'
+import { EmptyState } from '@/app/components/ui/empty-state'
+import { FolderPlus, Package } from 'lucide-react'
+import { WatchlistSkeleton } from '@/app/components/ui/skeleton'
 
 interface WatchlistManagerProps {
   selectedWatchlistId?: string | null
@@ -11,6 +16,7 @@ interface WatchlistManagerProps {
 }
 
 export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelect, onStockAdded }: WatchlistManagerProps) {
+  const { confirm } = useConfirmation()
   const [watchlists, setWatchlists] = useState<UserWatchlist[]>([])
   const [selectedWatchlist, setSelectedWatchlist] = useState<string | null>(null)
   const [watchlistStocks, setWatchlistStocks] = useState<WatchlistStock[]>([])
@@ -100,8 +106,11 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
       setWatchlists([...watchlists, data.data])
       setNewWatchlistName('')
       setIsCreating(false)
+      toast.success(`Watchlist "${newWatchlistName}" created successfully`)
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to create watchlist')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create watchlist'
+      setError(errorMessage)
+      toast.error(errorMessage)
     }
   }
 
@@ -124,19 +133,30 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
       setWatchlists(watchlists.map(w => w.id === id ? { ...w, name: newName } : w))
       setEditingWatchlistId(null)
       setEditingWatchlistName('')
+      toast.success('Watchlist renamed successfully')
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to rename watchlist')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to rename watchlist'
+      setError(errorMessage)
+      toast.error(errorMessage)
     }
   }
 
   const deleteWatchlist = async (id: string) => {
     const watchlist = watchlists.find(w => w.id === id)
     const stockCount = watchlist?.stock_count?.[0]?.count || 0
-    const message = stockCount > 0 
-      ? `Are you sure you want to delete this watchlist? This will remove ${stockCount} stock(s) from this watchlist only. Stocks will remain in other watchlists.`
-      : 'Are you sure you want to delete this watchlist?'
+    const description = stockCount > 0 
+      ? `This will remove ${stockCount} stock(s) from this watchlist only. Stocks will remain in other watchlists.`
+      : 'This action cannot be undone.'
     
-    if (!confirm(message)) return
+    const confirmed = await confirm({
+      title: 'Delete Watchlist?',
+      description,
+      confirmText: 'Delete',
+      variant: 'destructive',
+      icon: 'delete'
+    })
+    
+    if (!confirmed) return
 
     try {
       const response = await fetch(`/api/watchlists/${id}`, {
@@ -154,8 +174,11 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
         setWatchlistStocks([])
         onWatchlistSelect?.(null)
       }
+      toast.success('Watchlist deleted successfully')
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to delete watchlist')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete watchlist'
+      setError(errorMessage)
+      toast.error(errorMessage)
     }
   }
 
@@ -185,8 +208,12 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
       if (onStockAdded) {
         onStockAdded()
       }
+      
+      toast.success(`${newStockTicker.toUpperCase()} added to watchlist`)
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to add stock')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add stock'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setAddingStock(false)
     }
@@ -236,15 +263,27 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
   const bulkRemoveStocks = async () => {
     if (selectedStocks.size === 0 || !selectedWatchlist) return
 
-    const confirmed = confirm(`Remove ${selectedStocks.size} selected stock(s) from this watchlist?`)
+    const confirmed = await confirm({
+      title: 'Remove Stocks?',
+      description: `Remove ${selectedStocks.size} selected stock(s) from this watchlist?`,
+      confirmText: 'Remove',
+      variant: 'destructive',
+      icon: 'warning'
+    })
+    
     if (!confirmed) return
 
-    for (const ticker of selectedStocks) {
-      await removeStock(ticker)
-    }
-    setSelectedStocks(new Set())
+    const removingToast = toast.loading(`Removing ${selectedStocks.size} stocks...`)
     
-    // Note: removeStock already calls onStockAdded, so the refresh will happen automatically
+    try {
+      for (const ticker of selectedStocks) {
+        await removeStock(ticker)
+      }
+      setSelectedStocks(new Set())
+      toast.success(`Successfully removed ${selectedStocks.size} stocks`, { id: removingToast })
+    } catch {
+      toast.error('Failed to remove some stocks', { id: removingToast })
+    }
   }
 
   const handleBulkImport = async (tickers: string[]) => {
@@ -296,13 +335,7 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
     return (
       <div className="bg-card rounded-lg shadow-sm border border-border p-6">
         <h2 className="text-2xl font-bold mb-4 text-foreground">Watchlists</h2>
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="animate-pulse">
-              <div className="h-12 bg-muted/50 rounded"></div>
-            </div>
-          ))}
-        </div>
+        <WatchlistSkeleton />
       </div>
     )
   }
@@ -457,9 +490,15 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
           })}
           
           {watchlists.length === 0 && (
-            <p className="text-muted-foreground text-center py-4">
-              No watchlists yet. Create one to get started!
-            </p>
+            <EmptyState
+              icon={FolderPlus}
+              title="No watchlists yet"
+              description="Create your first watchlist to start tracking stocks"
+              action={{
+                label: "Create Watchlist",
+                onClick: () => setIsCreating(true)
+              }}
+            />
           )}
         </div>
       </div>
@@ -557,9 +596,12 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
             })}
             
             {watchlistStocks.length === 0 && (
-              <p className="text-muted-foreground text-center py-4">
-                No stocks in this watchlist yet.
-              </p>
+              <EmptyState
+                icon={Package}
+                title="No stocks yet"
+                description="Add stocks to this watchlist to track their earnings"
+                className="py-8"
+              />
             )}
           </div>
         </div>

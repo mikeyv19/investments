@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Modal } from '@/app/components/ui/modal'
 
 interface BulkImportModalProps {
   isOpen: boolean
@@ -12,8 +13,6 @@ export default function BulkImportModal({ isOpen, onClose, onImport }: BulkImpor
   const [inputText, setInputText] = useState('')
   const [parsedTickers, setParsedTickers] = useState<string[]>([])
   const [importMethod, setImportMethod] = useState<'paste' | 'file'>('paste')
-
-  if (!isOpen) return null
 
   const parseTickers = (text: string) => {
     // Split by common delimiters: comma, semicolon, newline, tab, space
@@ -56,9 +55,13 @@ export default function BulkImportModal({ isOpen, onClose, onImport }: BulkImpor
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-card rounded-lg shadow-xl border border-border max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4 text-foreground">Bulk Import Stocks</h2>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Bulk Import Stocks"
+      size="lg"
+    >
+      <div className="p-6 max-h-[70vh] overflow-y-auto">
         
         <div className="mb-4">
           <div className="flex gap-4 mb-4">
@@ -145,6 +148,6 @@ export default function BulkImportModal({ isOpen, onClose, onImport }: BulkImpor
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

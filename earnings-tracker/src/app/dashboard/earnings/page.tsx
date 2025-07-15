@@ -7,8 +7,13 @@ import WatchlistManager from '@/app/components/WatchlistManager'
 import RefreshProgressModal from '@/app/components/RefreshProgressModal'
 import { EarningsGridData } from '@/app/types'
 import { createClient } from '@/app/lib/supabase-browser'
+import { useConfirmation } from '@/app/components/ui/confirmation-dialog'
+import { EmptyState } from '@/app/components/ui/empty-state'
+import { TrendingUp, CalendarDays } from 'lucide-react'
+import { DataGridSkeleton } from '@/app/components/ui/skeleton'
 
 export default function EarningsDashboard() {
+  const { confirm } = useConfirmation()
   const [earningsData, setEarningsData] = useState<EarningsGridData[]>([])
   const [selectedWatchlistId, setSelectedWatchlistId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -148,11 +153,12 @@ export default function EarningsDashboard() {
     const minutes = Math.floor((estimatedSeconds % 3600) / 60)
     const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes} minutes`
     
-    const confirmed = confirm(
-      `This will refresh data for all ${uniqueTickers.length} stocks in this watchlist.\n\n` +
-      `Estimated time: ${timeStr}\n\n` +
-      `Continue?`
-    )
+    const confirmed = await confirm({
+      title: 'Refresh All Data?',
+      description: `This will refresh data for all ${uniqueTickers.length} stocks in this watchlist.\n\nEstimated time: ${timeStr}`,
+      confirmText: 'Start Refresh',
+      icon: 'info'
+    })
 
     if (!confirmed) return
 
@@ -242,12 +248,14 @@ export default function EarningsDashboard() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4">
         <div className="max-w-4xl mx-auto mt-20">
-          <div className="bg-card rounded-lg shadow-lg border border-border p-12 text-center">
-            <h1 className="text-4xl font-bold mb-4 text-foreground">Welcome to Earnings Tracker</h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              Get started by creating your first watchlist to track earnings for your favorite stocks.
-            </p>
-            <div className="bg-muted/50 rounded-lg p-6 mb-8">
+          <div className="bg-card rounded-lg shadow-lg border border-border p-12">
+            <EmptyState
+              icon={TrendingUp}
+              title="Welcome to Earnings Tracker"
+              description="Track upcoming earnings dates for your favorite stocks. Create your first watchlist to get started!"
+              className="py-0"
+            />
+            <div className="bg-muted/50 rounded-lg p-6 mb-8 mt-8">
               <h2 className="text-2xl font-semibold mb-4">How it works:</h2>
               <ul className="text-left max-w-2xl mx-auto space-y-3">
                 <li className="flex items-start">
@@ -364,24 +372,16 @@ export default function EarningsDashboard() {
                 )}
                 
                 {loading ? (
-                  <div className="space-y-4">
-                    <div className="animate-pulse">
-                      <div className="h-8 bg-muted/50 rounded w-1/4 mb-4"></div>
-                      <div className="space-y-3">
-                        {[1, 2, 3, 4, 5].map(i => (
-                          <div key={i} className="h-16 bg-muted/50 rounded"></div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <DataGridSkeleton />
                 ) : earningsData.length > 0 ? (
                   <EarningsDataGrid data={earningsData} />
                 ) : (
                   <div className="flex justify-center items-center h-64">
-                    <div className="text-center">
-                      <p className="text-xl text-muted-foreground mb-2">No earnings data found</p>
-                      <p className="text-sm text-muted-foreground">Add stocks to this watchlist to see their earnings data</p>
-                    </div>
+                    <EmptyState
+                      icon={CalendarDays}
+                      title="No earnings data found"
+                      description="Add stocks to this watchlist to see their upcoming earnings"
+                    />
                   </div>
                 )}
               </div>
