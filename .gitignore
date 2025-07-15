@@ -48,4 +48,4 @@ earnings-tracker/scripts/node_modules/
 *.log
 
 # Claude settings (you may want to keep this tracked)
-# .claude/settings.local.json
+# .claude/settings.local.json.claude/
