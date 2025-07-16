@@ -47,5 +47,7 @@ earnings-tracker/scripts/node_modules/
 *.tmp
 *.log
 
-# Claude settings (you may want to keep this tracked)
-# .claude/settings.local.json.claude/
+# Claude settings (contains API keys - should not be tracked)
+.claude/
+settings.local.json
+Claude.md
