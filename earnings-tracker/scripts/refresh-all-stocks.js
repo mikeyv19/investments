@@ -91,21 +91,30 @@ async function refreshStock(ticker, retryCount = 0) {
     // Check for timeout errors in stdout/stderr
     const hasTimeoutError = stdout.includes('Navigation timeout') || 
                            stderr.includes('Navigation timeout') ||
-                           stdout.includes('timeout of 30000 ms exceeded') ||
-                           stderr.includes('timeout of 30000 ms exceeded')
+                           stdout.includes('timeout of') ||
+                           stdout.includes('TimeoutError') ||
+                           stdout.includes('Error scraping') && stdout.includes('timeout')
     
     // Check for success indicators in output
     const success = stdout.includes('Successfully fetched earnings data') || 
                    stdout.includes('Completed fetching data for') ||
-                   stdout.includes('Updated earnings data for')
+                   stdout.includes('Updated earnings data for') ||
+                   (stdout.includes('✅') && stdout.includes('Updated'))
     
-    if (success) {
+    // Additional check: if we found earnings data but got a timeout on secondary sources
+    const partialSuccess = stdout.includes('Found earnings date') && 
+                          stdout.includes('Found EPS estimate') &&
+                          stdout.includes('✓ Saved earnings estimate')
+    
+    if (success || partialSuccess) {
       return { success: true, message: `Successfully refreshed ${ticker}` }
     } else if (hasTimeoutError && retryCount < MAX_RETRIES) {
       // Retry for timeout errors
       await log(`  Timeout error detected for ${ticker}. Retrying in ${RETRY_DELAY/1000} seconds... (Attempt ${retryCount + 2}/${MAX_RETRIES + 1})`)
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
       return refreshStock(ticker, retryCount + 1)
+    } else if (hasTimeoutError && retryCount >= MAX_RETRIES) {
+      return { success: false, message: `Failed to refresh ${ticker} after ${MAX_RETRIES + 1} attempts: Timeout errors` }
     } else if (stderr && !stderr.includes('Warning') && !stderr.includes('DeprecationWarning')) {
       return { success: false, message: `Failed to refresh ${ticker}: ${stderr}` }
     } else {
@@ -166,7 +175,7 @@ async function refreshAllStocks() {
         await log(`${progress} ✓ ${result.message} (${duration}s)`)
       } else {
         results.failed++
-        results.errors.push(result.message)
+        results.errors.push(`${ticker.ticker}: ${result.message}`)
         await log(`${progress} ✗ ${result.message} (${duration}s)`)
       }
       
@@ -185,8 +194,21 @@ async function refreshAllStocks() {
     await log(`Failed: ${results.failed}`)
     
     if (results.errors.length > 0) {
-      await log('\nErrors:')
-      results.errors.forEach(error => log(`  - ${error}`))
+      await log('\nFailed stocks:')
+      
+      // Group errors by type
+      const timeoutErrors = results.errors.filter(e => e.includes('Timeout') || e.includes('timeout'))
+      const otherErrors = results.errors.filter(e => !e.includes('Timeout') && !e.includes('timeout'))
+      
+      if (timeoutErrors.length > 0) {
+        await log('\nTimeout errors:')
+        timeoutErrors.forEach(error => log(`  - ${error}`))
+      }
+      
+      if (otherErrors.length > 0) {
+        await log('\nOther errors:')
+        otherErrors.forEach(error => log(`  - ${error}`))
+      }
     }
     
     const totalTime = ((Date.now() - startTime) / 1000 / 60).toFixed(1)
