@@ -48,7 +48,7 @@ async function scrapeYahooFinance(ticker, browser) {
     const quotePage = await browser.newPage()
     await quotePage.goto(`https://finance.yahoo.com/quote/${ticker}/`, {
       waitUntil: 'networkidle2',
-      timeout: 30000
+      timeout: 60000 // Increased to 60 seconds for slow-loading pages
     })
 
     // Wait for the page to load
@@ -126,7 +126,7 @@ async function scrapeYahooFinance(ticker, browser) {
     const analysisPage = await browser.newPage()
     await analysisPage.goto(`https://finance.yahoo.com/quote/${ticker}/analysis/`, {
       waitUntil: 'networkidle2',
-      timeout: 30000
+      timeout: 60000 // Increased to 60 seconds for slow-loading pages
     })
 
     // Wait for the analysis content to load

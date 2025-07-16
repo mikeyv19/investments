@@ -66,7 +66,10 @@ async function getAllTickers() {
 /**
  * Refresh a single stock by running the scraper
  */
-async function refreshStock(ticker) {
+async function refreshStock(ticker, retryCount = 0) {
+  const MAX_RETRIES = 2
+  const RETRY_DELAY = 10000 // 10 seconds between retries
+  
   try {
     // Run the scraper directly using child_process
     const { exec } = require('child_process')
@@ -81,8 +84,15 @@ async function refreshStock(ticker) {
         ...process.env,
         SUPABASE_URL: SUPABASE_URL,
         SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_KEY
-      }
+      },
+      timeout: 120000 // 2 minute timeout for the entire command
     })
+    
+    // Check for timeout errors in stdout/stderr
+    const hasTimeoutError = stdout.includes('Navigation timeout') || 
+                           stderr.includes('Navigation timeout') ||
+                           stdout.includes('timeout of 30000 ms exceeded') ||
+                           stderr.includes('timeout of 30000 ms exceeded')
     
     // Check for success indicators in output
     const success = stdout.includes('Successfully fetched earnings data') || 
@@ -91,12 +101,23 @@ async function refreshStock(ticker) {
     
     if (success) {
       return { success: true, message: `Successfully refreshed ${ticker}` }
+    } else if (hasTimeoutError && retryCount < MAX_RETRIES) {
+      // Retry for timeout errors
+      await log(`  Timeout error detected for ${ticker}. Retrying in ${RETRY_DELAY/1000} seconds... (Attempt ${retryCount + 2}/${MAX_RETRIES + 1})`)
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+      return refreshStock(ticker, retryCount + 1)
     } else if (stderr && !stderr.includes('Warning') && !stderr.includes('DeprecationWarning')) {
       return { success: false, message: `Failed to refresh ${ticker}: ${stderr}` }
     } else {
       return { success: false, message: `Failed to refresh ${ticker}: No data found` }
     }
   } catch (error) {
+    // Check if the exec itself timed out or had a timeout-related error
+    if ((error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) && retryCount < MAX_RETRIES) {
+      await log(`  Command timeout for ${ticker}. Retrying in ${RETRY_DELAY/1000} seconds... (Attempt ${retryCount + 2}/${MAX_RETRIES + 1})`)
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+      return refreshStock(ticker, retryCount + 1)
+    }
     return { success: false, message: `Error refreshing ${ticker}: ${error.message}` }
   }
 }
