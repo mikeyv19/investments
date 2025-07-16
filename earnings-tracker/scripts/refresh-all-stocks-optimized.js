@@ -54,8 +54,10 @@ async function getAllTickers() {
 /**
  * Refresh a single stock using the shared browser instance
  */
-async function refreshStockWithBrowser(company, browser) {
+async function refreshStockWithBrowser(company, browser, retryCount = 0) {
   const { ticker, company_name } = company
+  const MAX_RETRIES = 2
+  const RETRY_DELAY = 10000 // 10 seconds between retries
   
   try {
     // Fetch Yahoo Finance data
@@ -125,6 +127,22 @@ async function refreshStockWithBrowser(company, browser) {
       return { success: false, message: 'No earnings data found' }
     }
   } catch (error) {
+    // Check if it's a timeout error and we have retries left
+    const isTimeoutError = error.message.includes('timeout') || 
+                          error.message.includes('Navigation timeout') ||
+                          error.message.includes('TimeoutError')
+    
+    if (isTimeoutError && retryCount < MAX_RETRIES) {
+      console.log(`  Timeout error detected. Retrying in ${RETRY_DELAY/1000} seconds... (Attempt ${retryCount + 2}/${MAX_RETRIES + 1})`)
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+      return refreshStockWithBrowser(company, browser, retryCount + 1)
+    }
+    
+    // If we've exhausted retries or it's not a timeout error
+    if (isTimeoutError && retryCount >= MAX_RETRIES) {
+      return { success: false, message: `Failed after ${MAX_RETRIES + 1} attempts: ${error.message}` }
+    }
+    
     return { success: false, message: error.message }
   }
 }
@@ -207,7 +225,28 @@ async function refreshAllStocks() {
     
     if (results.errors.length > 0) {
       console.log('\nFailed stocks:')
-      results.errors.forEach(error => console.log(`  - ${error}`))
+      
+      // Group errors by type
+      const timeoutErrors = results.errors.filter(e => 
+        e.includes('timeout') || 
+        e.includes('Timeout') || 
+        e.includes('Failed after') && e.includes('attempts')
+      )
+      const otherErrors = results.errors.filter(e => 
+        !e.includes('timeout') && 
+        !e.includes('Timeout') && 
+        !(e.includes('Failed after') && e.includes('attempts'))
+      )
+      
+      if (timeoutErrors.length > 0) {
+        console.log('\nTimeout errors:')
+        timeoutErrors.forEach(error => console.log(`  - ${error}`))
+      }
+      
+      if (otherErrors.length > 0) {
+        console.log('\nOther errors:')
+        otherErrors.forEach(error => console.log(`  - ${error}`))
+      }
     }
     
     const totalTime = ((Date.now() - startTime) / 1000 / 60).toFixed(1)
