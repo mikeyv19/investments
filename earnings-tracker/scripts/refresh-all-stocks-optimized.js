@@ -30,23 +30,46 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 const RATE_LIMIT_DELAY = 3000
 
 /**
- * Get all tickers from the companies table
+ * Get all tickers that are in at least one user's watchlist
  */
-async function getAllTickers() {
+async function getAllTickersInWatchlists() {
   try {
+    // Get distinct companies that are in watchlists
     const { data: companies, error } = await supabase
       .from('companies')
-      .select('id, ticker, company_name')
+      .select(`
+        id, 
+        ticker, 
+        company_name,
+        watchlist_stocks!inner(
+          watchlist_id
+        )
+      `)
       .order('ticker', { ascending: true })
     
     if (error) {
-      console.error('Error fetching companies:', error.message)
+      console.error('Error fetching companies in watchlists:', error.message)
       return []
     }
     
-    return companies || []
+    // Remove duplicates (companies can be in multiple watchlists)
+    const uniqueCompanies = []
+    const seenIds = new Set()
+    
+    for (const company of companies || []) {
+      if (!seenIds.has(company.id)) {
+        seenIds.add(company.id)
+        uniqueCompanies.push({
+          id: company.id,
+          ticker: company.ticker,
+          company_name: company.company_name
+        })
+      }
+    }
+    
+    return uniqueCompanies
   } catch (error) {
-    console.error('Error in getAllTickers:', error.message)
+    console.error('Error in getAllTickersInWatchlists:', error.message)
     return []
   }
 }
@@ -160,16 +183,16 @@ async function refreshAllStocks() {
   let browser = null
   
   try {
-    // Get all tickers from the database
-    console.log('Fetching all tickers from database...')
-    const companies = await getAllTickers()
+    // Get all tickers that are in watchlists
+    console.log('Fetching all tickers from watchlists...')
+    const companies = await getAllTickersInWatchlists()
     
     if (companies.length === 0) {
-      console.log('No tickers found in database')
+      console.log('No tickers found in any watchlists')
       return
     }
     
-    console.log(`Found ${companies.length} tickers to refresh`)
+    console.log(`Found ${companies.length} tickers in watchlists to refresh`)
     console.log(`Tickers: ${companies.map(c => c.ticker).join(', ')}`)
     console.log('\n')
     

@@ -42,23 +42,46 @@ async function log(message) {
 }
 
 /**
- * Get all tickers from the companies table
+ * Get all tickers that are in at least one user's watchlist
  */
-async function getAllTickers() {
+async function getAllTickersInWatchlists() {
   try {
+    // Get distinct companies that are in watchlists
     const { data: companies, error } = await supabase
       .from('companies')
-      .select('id, ticker, company_name')
+      .select(`
+        id, 
+        ticker, 
+        company_name,
+        watchlist_stocks!inner(
+          watchlist_id
+        )
+      `)
       .order('ticker', { ascending: true })
     
     if (error) {
-      await log(`Error fetching companies: ${error.message}`)
+      await log(`Error fetching companies in watchlists: ${error.message}`)
       return []
     }
     
-    return companies || []
+    // Remove duplicates (companies can be in multiple watchlists)
+    const uniqueCompanies = []
+    const seenIds = new Set()
+    
+    for (const company of companies || []) {
+      if (!seenIds.has(company.id)) {
+        seenIds.add(company.id)
+        uniqueCompanies.push({
+          id: company.id,
+          ticker: company.ticker,
+          company_name: company.company_name
+        })
+      }
+    }
+    
+    return uniqueCompanies
   } catch (error) {
-    await log(`Error in getAllTickers: ${error.message}`)
+    await log(`Error in getAllTickersInWatchlists: ${error.message}`)
     return []
   }
 }
@@ -138,16 +161,16 @@ async function refreshAllStocks() {
   await log('===== Starting Daily Stock Refresh =====')
   
   try {
-    // Get all tickers from the database
-    await log('Fetching all tickers from database...')
-    const tickers = await getAllTickers()
+    // Get all tickers that are in watchlists
+    await log('Fetching all tickers from watchlists...')
+    const tickers = await getAllTickersInWatchlists()
     
     if (tickers.length === 0) {
-      await log('No tickers found in database')
+      await log('No tickers found in any watchlists')
       return
     }
     
-    await log(`Found ${tickers.length} unique tickers to refresh`)
+    await log(`Found ${tickers.length} unique tickers in watchlists to refresh`)
     await log(`Tickers: ${tickers.map(t => t.ticker).join(', ')}`)
     await log('')
     
