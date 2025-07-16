@@ -594,6 +594,13 @@ async function scrapeEarningsWhispers(ticker, browser) {
   } catch (error) {
     console.error(`  Error scraping EarningsWhispers for ${ticker}:`, error.message)
     result.error = error.message
+    
+    // Re-throw timeout errors so they can be caught by retry logic
+    if (error.message.includes('timeout') || 
+        error.message.includes('Navigation timeout') || 
+        error.message.includes('TimeoutError')) {
+      throw error
+    }
   } finally {
     if (page) {
       await page.close()

@@ -208,6 +208,13 @@ async function getEarningsTiming(ticker, browser) {
       }
     } catch (error) {
       console.log(`    ${source.name} failed: ${error.message}`)
+      
+      // Re-throw timeout errors so they can be caught by retry logic
+      if (error.message.includes('timeout') || 
+          error.message.includes('Navigation timeout') || 
+          error.message.includes('TimeoutError')) {
+        throw error
+      }
     }
     
     // Small delay between sources
