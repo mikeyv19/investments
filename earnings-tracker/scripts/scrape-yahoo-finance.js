@@ -46,13 +46,23 @@ async function scrapeYahooFinance(ticker, browser) {
   try {
     // First, get the earnings date from the quote page
     const quotePage = await browser.newPage()
+    
+    // Add cache-busting headers to get fresh data
+    await quotePage.setExtraHTTPHeaders({
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    })
+    
     await quotePage.goto(`https://finance.yahoo.com/quote/${ticker}/`, {
       waitUntil: 'networkidle2',
       timeout: 60000 // Increased to 60 seconds for slow-loading pages
     })
 
-    // Wait for the page to load
+    // Wait for the page to load and give extra time for dynamic content
     await quotePage.waitForSelector('fin-streamer, [data-field], .yf-1jj98ts', { timeout: 10000 }).catch(() => {})
+    
+    // Additional wait to ensure all dynamic content is loaded
+    await new Promise(resolve => setTimeout(resolve, 3000))
 
     // Extract company name
     const companyName = await quotePage.evaluate(() => {
@@ -116,6 +126,10 @@ async function scrapeYahooFinance(ticker, browser) {
       result.earningsDate = parsedDate.date
       result.earningsDateRange = parsedDate.range
       console.log(`  Found earnings date: ${earningsDateText}`)
+      if (parsedDate.range) {
+        console.log(`  Note: This is a date range. Using first date: ${parsedDate.date}`)
+        console.log(`  Full range stored: ${parsedDate.range}`)
+      }
     } else {
       console.log(`  No earnings date found for ${ticker}`)
     }
