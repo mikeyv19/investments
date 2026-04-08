@@ -15,7 +15,8 @@ export async function GET() {
       )
     }
 
-    const { data, error } = await supabase
+    // Fetch owned watchlists
+    const { data: ownedWatchlists, error: ownedError } = await supabase
       .from('user_watchlists')
       .select(`
         *,
@@ -24,15 +25,35 @@ export async function GET() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Database error:', error)
+    if (ownedError) {
+      console.error('Database error:', ownedError)
       return NextResponse.json(
         { error: 'Failed to fetch watchlists' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ data })
+    // Fetch shared watchlists
+    const { data: sharedRecords, error: sharedError } = await supabase
+      .from('watchlist_shares')
+      .select(`
+        watchlist_id,
+        watchlist:user_watchlists(*, stock_count:watchlist_stocks(count))
+      `)
+      .eq('shared_with_user_id', user.id)
+
+    if (sharedError) {
+      console.error('Shared watchlists error:', sharedError)
+      // Non-fatal: return owned watchlists only
+    }
+
+    const owned = (ownedWatchlists || []).map(w => ({ ...w, is_owner: true }))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sharedWatchlists = (sharedRecords || []).map((r: any) => r.watchlist).filter(Boolean)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const shared = sharedWatchlists.map((w: any) => ({ ...w, is_owner: false }))
+
+    return NextResponse.json({ data: [...owned, ...shared] })
   } catch (error) {
     console.error('Watchlists GET error:', error)
     return NextResponse.json(

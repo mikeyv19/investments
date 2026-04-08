@@ -29,12 +29,11 @@ export async function POST(
       )
     }
 
-    // Verify watchlist belongs to user
+    // Verify user has access to watchlist (RLS handles owner + shared users)
     const { data: watchlist, error: watchlistError } = await supabase
       .from('user_watchlists')
       .select('id')
       .eq('id', id)
-      .eq('user_id', user.id)
       .single()
 
     if (watchlistError || !watchlist) {
@@ -148,12 +147,11 @@ export async function DELETE(
       )
     }
 
-    // Verify watchlist belongs to user
+    // Verify user has access to watchlist (RLS handles owner + shared users)
     const { data: watchlist, error: watchlistError } = await supabase
       .from('user_watchlists')
       .select('id')
       .eq('id', id)
-      .eq('user_id', user.id)
       .single()
 
     if (watchlistError || !watchlist) {

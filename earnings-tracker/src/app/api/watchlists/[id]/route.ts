@@ -19,12 +19,11 @@ export async function GET(
       )
     }
 
-    // Get watchlist details
+    // Get watchlist details (RLS handles access control for owner + shared users)
     const { data: watchlist, error: watchlistError } = await supabase
       .from('user_watchlists')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
       .single()
 
     if (watchlistError || !watchlist) {
@@ -52,9 +51,10 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       data: {
         ...watchlist,
+        is_owner: watchlist.user_id === user.id,
         stocks: stocks || []
       }
     })
@@ -95,11 +95,11 @@ export async function PUT(
       )
     }
 
+    // RLS handles access control for owner + shared users
     const { data, error } = await supabase
       .from('user_watchlists')
       .update({ name: name.trim() })
       .eq('id', id)
-      .eq('user_id', user.id)
       .select()
       .single()
 

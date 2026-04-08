@@ -16,6 +16,17 @@ export interface UserWatchlist {
   created_at: string
   updated_at: string
   stock_count?: { count: number }[]
+  is_owner?: boolean
+}
+
+// Watchlist share record
+export interface WatchlistShare {
+  id: string
+  watchlist_id: string
+  shared_with_user_id: string
+  shared_by_user_id: string
+  created_at: string
+  shared_with_email?: string
 }
 
 // Watchlist stocks (junction table)

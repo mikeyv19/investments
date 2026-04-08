@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { UserWatchlist, WatchlistStock } from '@/app/types'
 import BulkImportModal from './BulkImportModal'
+import ShareWatchlistModal from './ShareWatchlistModal'
 import { useConfirmation } from '@/app/components/ui/confirmation-dialog'
 import toast from 'react-hot-toast'
 import { EmptyState } from '@/app/components/ui/empty-state'
-import { FolderPlus, Package } from 'lucide-react'
+import { FolderPlus, Package, Users } from 'lucide-react'
 import { WatchlistSkeleton } from '@/app/components/ui/skeleton'
 
 interface WatchlistManagerProps {
@@ -35,6 +36,7 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
     current: 0,
     total: 0
   })
+  const [shareModalWatchlist, setShareModalWatchlist] = useState<{ id: string; name: string } | null>(null)
 
   // Fetch watchlists
   useEffect(() => {
@@ -394,10 +396,10 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
         )}
 
         <div className="space-y-2">
-          {watchlists.map(watchlist => {
+          {watchlists.filter(w => w.is_owner !== false).map(watchlist => {
             const stockCount = watchlist.stock_count?.[0]?.count || 0
             const isEditing = editingWatchlistId === watchlist.id
-            
+
             return (
               <div
                 key={watchlist.id}
@@ -407,7 +409,7 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
                     : 'bg-muted/50 hover:bg-accent/50 border-border hover:border-accent'
                 }`}
               >
-                <div 
+                <div
                   className="flex-1 flex items-center gap-2 cursor-pointer"
                   onClick={() => !isEditing && handleWatchlistSelect(watchlist.id)}
                 >
@@ -463,6 +465,16 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
+                          setShareModalWatchlist({ id: watchlist.id, name: watchlist.name })
+                        }}
+                        className="text-muted-foreground hover:text-primary transition-colors"
+                        title="Share watchlist"
+                      >
+                        <Users className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
                           setEditingWatchlistId(watchlist.id)
                           setEditingWatchlistName(watchlist.name)
                         }}
@@ -488,8 +500,8 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
               </div>
             )
           })}
-          
-          {watchlists.length === 0 && (
+
+          {watchlists.filter(w => w.is_owner !== false).length === 0 && (
             <EmptyState
               icon={FolderPlus}
               title="No watchlists yet"
@@ -502,6 +514,99 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
           )}
         </div>
       </div>
+
+      {/* Shared Watchlists */}
+      {watchlists.some(w => w.is_owner === false) && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-foreground mb-3">Shared with Me</h3>
+          <div className="space-y-2">
+            {watchlists.filter(w => w.is_owner === false).map(watchlist => {
+              const stockCount = watchlist.stock_count?.[0]?.count || 0
+              const isEditing = editingWatchlistId === watchlist.id
+
+              return (
+                <div
+                  key={watchlist.id}
+                  className={`flex items-center p-3 rounded border transition-all ${
+                    selectedWatchlist === watchlist.id
+                      ? 'bg-gradient-to-r from-primary/20 to-secondary/20 border-primary shadow-md shadow-primary/20'
+                      : 'bg-muted/50 hover:bg-accent/50 border-border hover:border-accent'
+                  }`}
+                >
+                  <div
+                    className="flex-1 flex items-center gap-2 cursor-pointer"
+                    onClick={() => !isEditing && handleWatchlistSelect(watchlist.id)}
+                  >
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editingWatchlistName}
+                        onChange={(e) => setEditingWatchlistName(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            renameWatchlist(watchlist.id, editingWatchlistName)
+                          } else if (e.key === 'Escape') {
+                            setEditingWatchlistId(null)
+                            setEditingWatchlistName('')
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 px-2 py-1 bg-background border border-input rounded text-sm"
+                        autoFocus
+                      />
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <span className="flex-1">{watchlist.name}</span>
+                        <span className="text-sm text-muted-foreground">({stockCount} stocks)</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isEditing ? (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            renameWatchlist(watchlist.id, editingWatchlistName)
+                          }}
+                          className="text-xs text-primary hover:text-primary/80 transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingWatchlistId(null)
+                            setEditingWatchlistName('')
+                          }}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingWatchlistId(watchlist.id)
+                          setEditingWatchlistName(watchlist.name)
+                        }}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        title="Rename watchlist"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Selected Watchlist Stocks */}
       {selectedWatchlist && (
@@ -613,6 +718,16 @@ export default function WatchlistManager({ selectedWatchlistId, onWatchlistSelec
         onClose={() => setShowBulkImport(false)}
         onImport={handleBulkImport}
       />
+
+      {/* Share Watchlist Modal */}
+      {shareModalWatchlist && (
+        <ShareWatchlistModal
+          isOpen={!!shareModalWatchlist}
+          onClose={() => setShareModalWatchlist(null)}
+          watchlistId={shareModalWatchlist.id}
+          watchlistName={shareModalWatchlist.name}
+        />
+      )}
     </div>
   )
 }
